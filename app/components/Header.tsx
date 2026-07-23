@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { NAV_LINKS, STUDENT_NUMBER } from "../nav-links";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Header() {
   const pathname = usePathname();
@@ -16,30 +17,34 @@ export default function Header() {
           Student No. {STUDENT_NUMBER}
         </span>
 
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen((open) => !open)}
-          aria-expanded={isMenuOpen}
-          aria-controls="primary-navigation"
-          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          className="flex flex-col items-center justify-center gap-1.5 rounded p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100"
-        >
-          <span
-            className={`block h-0.5 w-6 bg-zinc-900 transition-transform dark:bg-zinc-50 ${
-              isMenuOpen ? "translate-y-2 rotate-45" : ""
-            }`}
-          />
-          <span
-            className={`block h-0.5 w-6 bg-zinc-900 transition-opacity dark:bg-zinc-50 ${
-              isMenuOpen ? "opacity-0" : "opacity-100"
-            }`}
-          />
-          <span
-            className={`block h-0.5 w-6 bg-zinc-900 transition-transform dark:bg-zinc-50 ${
-              isMenuOpen ? "-translate-y-2 -rotate-45" : ""
-            }`}
-          />
-        </button>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            aria-expanded={isMenuOpen}
+            aria-controls="primary-navigation"
+            aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="flex flex-col items-center justify-center gap-1.5 rounded p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100"
+          >
+            <span
+              className={`block h-0.5 w-6 bg-zinc-900 transition-transform dark:bg-zinc-50 ${
+                isMenuOpen ? "translate-y-2 rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`block h-0.5 w-6 bg-zinc-900 transition-opacity dark:bg-zinc-50 ${
+                isMenuOpen ? "opacity-0" : "opacity-100"
+              }`}
+            />
+            <span
+              className={`block h-0.5 w-6 bg-zinc-900 transition-transform dark:bg-zinc-50 ${
+                isMenuOpen ? "-translate-y-2 -rotate-45" : ""
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       <nav
