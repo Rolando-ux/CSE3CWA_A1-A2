@@ -30,7 +30,7 @@ export default function ThemeToggle() {
 
   return (
     <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-      Dark Mode
+      {isDark ? "Dark Mode" : "Light Mode"}
       <button
         type="button"
         role="switch"
