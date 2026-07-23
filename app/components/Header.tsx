@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { NAV_LINKS, STUDENT_NUMBER } from "../nav-links";
+import { useEffect, useState } from "react";
+import { LAST_TAB_COOKIE, NAV_LINKS, STUDENT_NUMBER } from "../nav-links";
 import ThemeToggle from "./ThemeToggle";
+
+const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
 export default function Header() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.cookie = `${LAST_TAB_COOKIE}=${pathname}; path=/; max-age=${ONE_YEAR_IN_SECONDS}; samesite=lax`;
+  }, [pathname]);
 
   return (
     <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black">

@@ -14,3 +14,5 @@ export const NAV_LINKS: NavLink[] = [
 
 export const STUDENT_NAME = "Rolando Obanos Junior";
 export const STUDENT_NUMBER = "21582762";
+
+export const LAST_TAB_COOKIE = "lastTab";
