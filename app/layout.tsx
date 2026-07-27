@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CSE3CWA - Rolando Obanos Junior",
-  description: "CSE3CWA Cloud Based Web Application - Assignment 1",
+  title: "Phoneme Activity Builder - Rolando Obanos Junior",
+  description:
+    "CSE3CWA Cloud Based Web Application - phoneme-based Wordle and Word Search activity builder for Speech Pathology teachers",
 };
 
 export default function RootLayout({

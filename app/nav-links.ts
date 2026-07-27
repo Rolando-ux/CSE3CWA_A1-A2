@@ -5,11 +5,10 @@ export type NavLink = {
 
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home" },
-  { href: "/tabs", label: "Tabs" },
-  { href: "/escape-room", label: "Escape Room" },
-  { href: "/coding-races", label: "Coding Races" },
-  { href: "/court-room", label: "Court Room" },
+  { href: "/wordle", label: "Wordle" },
+  { href: "/word-search", label: "Word Search" },
   { href: "/about", label: "About" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export const STUDENT_NAME = "Rolando Obanos Junior";
