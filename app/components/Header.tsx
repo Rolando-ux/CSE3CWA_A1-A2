@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LAST_TAB_COOKIE, NAV_LINKS, STUDENT_NUMBER } from "../nav-links";
-import ThemeToggle from "./ThemeToggle";
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
@@ -24,8 +23,6 @@ export default function Header() {
         </span>
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
-
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}

@@ -15,3 +15,4 @@ export const STUDENT_NAME = "Rolando Obanos Junior";
 export const STUDENT_NUMBER = "21582762";
 
 export const LAST_TAB_COOKIE = "lastTab";
+export const THEME_COOKIE = "theme";

@@ -1,6 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { THEME_COOKIE } from "../nav-links";
+
+const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
 function subscribe(callback: () => void) {
   const observer = new MutationObserver(callback);
@@ -25,7 +28,7 @@ export default function ThemeToggle() {
   function toggleTheme() {
     const next = !isDark;
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    document.cookie = `${THEME_COOKIE}=${next ? "dark" : "light"}; path=/; max-age=${ONE_YEAR_IN_SECONDS}; samesite=lax`;
   }
 
   return (
