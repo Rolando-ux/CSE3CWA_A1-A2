@@ -1,4 +1,4 @@
-# CSE3CWA - Cloud Based Web Application
+# CSE3CWA - Phoneme Activity Builder
 
 **Student Name:** Rolando Obanos Junior
 **Student Number:** 21582762
@@ -7,23 +7,30 @@
 ## Project Overview
 
 This project is built for La Trobe University's CSE3CWA subject. It is a Next.js
-(TypeScript) application that generates standalone HTML5 + JavaScript + inline-CSS
-code snippets (no CSS classes) intended for deployment on the Moodle LMS.
+(TypeScript) application that lets Speech Pathology teachers build phoneme-based
+classroom activities - a Wordle-style guessing game and a Word Search puzzle -
+preview them in the browser, and generate a standalone `.html` file for each
+activity.
 
-The generated code is self-contained: copying it into a blank `.html` file and
-opening it in a browser will run it directly, with no dependency on this
-application or any external stylesheet.
+The generated HTML file is self-contained: downloading it and opening it in any
+web browser will run the activity directly, with no dependency on this
+application.
 
-### Assignment 1 scope
+### Assessment 1 scope
 
-- Home page - the code generator tool
-- About page - student details and a video walkthrough
-- Tabs page - fully functional tab-widget generator (headers + content -> HTML/JS/CSS output)
-- Escape Room, Coding Races, Court Room - placeholder pages (to be completed in a later stage)
-- Global layout: header with hamburger/kebab menu, dark/light mode toggle, footer
-  with copyright/name/student number/date, and a cookie that remembers the last
-  active tab
-- Accessibility-compliant markup throughout
+- Home page - project introduction and links to the two builders
+- About page - project description, student details, and a video walkthrough
+- Wordle page - builder and preview for a single phoneme-based Wordle activity
+- Word Search page - builder and preview for a phoneme-based word search
+  (~5 words)
+- Settings page - light/dark mode (stored in cookies) and layout preferences
+- Global layout: header with hamburger/kebab menu, footer with
+  copyright/name/student number/date
+- Accessibility-compliant markup throughout, including phoneme hover hints
+  (e.g. `/theta/` shown as `TH`, as in "thin")
+
+Assessment 1 is frontend only - it does not include a database or dynamic
+word-list management. Those features are introduced in later assessments.
 
 ## Tech Stack
 
