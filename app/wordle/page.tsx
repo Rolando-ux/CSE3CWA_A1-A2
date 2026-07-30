@@ -1,4 +1,4 @@
-import PhonemeKeyboard from "../components/PhonemeKeyboard";
+import WordleBuilder from "../components/WordleBuilder";
 
 export default function WordlePage() {
   return (
@@ -7,12 +7,12 @@ export default function WordlePage() {
         Wordle
       </h1>
       <p className="mt-4 max-w-xl text-zinc-600 dark:text-zinc-400">
-        Hover or focus a phoneme to see its English hint. The guessing game
-        will be built on top of this keyboard next.
+        Configure a phoneme-based word below, then preview it as a playable
+        guessing game.
       </p>
 
-      <div className="mt-8 w-full max-w-xl">
-        <PhonemeKeyboard />
+      <div className="mt-8 w-full">
+        <WordleBuilder />
       </div>
     </div>
   );
