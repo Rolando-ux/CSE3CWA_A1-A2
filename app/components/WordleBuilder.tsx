@@ -2,81 +2,125 @@
 
 import { useState } from "react";
 import { WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { evaluateGuess, type CellStatus } from "../lib/evaluateGuess";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 
 const DIFFICULTIES: Difficulty[] = [3, 4, 5];
 const MIN_GUESSES = 1;
 const MAX_GUESSES = 10;
 const DEFAULT_GUESSES = 6;
+const DEFAULT_DIFFICULTY: Difficulty = 3;
 
-function createEmptyGuesses(guessCount: number, phonemeCount: number): string[][] {
-  return Array.from({ length: guessCount }, () => Array(phonemeCount).fill(""));
+type GameStatus = "playing" | "won" | "lost";
+
+type GameState = {
+  guesses: string[][];
+  feedback: (CellStatus[] | null)[];
+  currentRow: number;
+  currentCol: number;
+  gameStatus: GameStatus;
+};
+
+const CELL_STATUS_STYLES: Record<CellStatus, string> = {
+  correct: "border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500",
+  present: "border-amber-500 bg-amber-500 text-white dark:border-amber-400 dark:bg-amber-400",
+  absent: "border-zinc-400 bg-zinc-400 text-white dark:border-zinc-600 dark:bg-zinc-600",
+};
+
+function createGameState(guessCount: number, phonemeCount: number): GameState {
+  return {
+    guesses: Array.from({ length: guessCount }, () => Array(phonemeCount).fill("")),
+    feedback: Array.from({ length: guessCount }, () => null),
+    currentRow: 0,
+    currentCol: 0,
+    gameStatus: "playing",
+  };
 }
 
 export default function WordleBuilder() {
-  const [difficulty, setDifficulty] = useState<Difficulty>(3);
+  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
   const [wordIndex, setWordIndex] = useState(0);
   const [showHints, setShowHints] = useState(true);
   const [guessCount, setGuessCount] = useState(DEFAULT_GUESSES);
-  const [guesses, setGuesses] = useState(() =>
-    createEmptyGuesses(DEFAULT_GUESSES, 3),
+  const [game, setGame] = useState(() =>
+    createGameState(DEFAULT_GUESSES, DEFAULT_DIFFICULTY),
   );
-  const [currentRow, setCurrentRow] = useState(0);
-  const [currentCol, setCurrentCol] = useState(0);
 
   const wordList = WORD_LISTS[difficulty];
   const selectedWord = wordList[wordIndex];
-  const isRowFull = currentCol === difficulty;
-  const isGameOver = currentRow >= guessCount;
-
-  function resetGrid(nextGuessCount: number, nextDifficulty: Difficulty) {
-    setGuesses(createEmptyGuesses(nextGuessCount, nextDifficulty));
-    setCurrentRow(0);
-    setCurrentCol(0);
-  }
+  const isPlaying = game.gameStatus === "playing";
+  const isRowFull = game.currentCol === difficulty;
 
   function handleDifficultyChange(nextDifficulty: Difficulty) {
     setDifficulty(nextDifficulty);
     setWordIndex(0);
-    resetGrid(guessCount, nextDifficulty);
+    setGame(createGameState(guessCount, nextDifficulty));
   }
 
   function handleWordChange(nextIndex: number) {
     setWordIndex(nextIndex);
-    resetGrid(guessCount, difficulty);
+    setGame(createGameState(guessCount, difficulty));
   }
 
   function handleGuessCountChange(nextGuessCount: number) {
     const clamped = Math.min(MAX_GUESSES, Math.max(MIN_GUESSES, nextGuessCount));
     setGuessCount(clamped);
-    resetGrid(clamped, difficulty);
+    setGame(createGameState(clamped, difficulty));
   }
 
   function handlePhonemeSelect(symbol: string) {
-    if (isGameOver || isRowFull) return;
-    setGuesses((prev) => {
-      const next = prev.map((row) => [...row]);
-      next[currentRow][currentCol] = symbol;
-      return next;
+    setGame((prev) => {
+      if (prev.gameStatus !== "playing" || prev.currentCol >= difficulty) {
+        return prev;
+      }
+      const guesses = prev.guesses.map((row) => [...row]);
+      guesses[prev.currentRow][prev.currentCol] = symbol;
+      return { ...prev, guesses, currentCol: prev.currentCol + 1 };
     });
-    setCurrentCol((col) => col + 1);
   }
 
   function handleBackspace() {
-    if (currentCol === 0) return;
-    const prevCol = currentCol - 1;
-    setGuesses((prev) => {
-      const next = prev.map((row) => [...row]);
-      next[currentRow][prevCol] = "";
-      return next;
+    setGame((prev) => {
+      if (prev.gameStatus !== "playing" || prev.currentCol === 0) {
+        return prev;
+      }
+      const prevCol = prev.currentCol - 1;
+      const guesses = prev.guesses.map((row) => [...row]);
+      guesses[prev.currentRow][prevCol] = "";
+      return { ...prev, guesses, currentCol: prevCol };
     });
-    setCurrentCol(prevCol);
   }
 
   function handleEnter() {
-    if (!isRowFull || isGameOver) return;
-    setCurrentRow((row) => row + 1);
-    setCurrentCol(0);
+    setGame((prev) => {
+      if (prev.gameStatus !== "playing" || prev.currentCol !== difficulty) {
+        return prev;
+      }
+
+      const rowStatuses = evaluateGuess(
+        prev.guesses[prev.currentRow],
+        selectedWord.phonemes,
+      );
+      const feedback = [...prev.feedback];
+      feedback[prev.currentRow] = rowStatuses;
+
+      const hasWon = rowStatuses.every((status) => status === "correct");
+      if (hasWon) {
+        return { ...prev, feedback, gameStatus: "won" };
+      }
+
+      const isLastRow = prev.currentRow + 1 >= prev.guesses.length;
+      if (isLastRow) {
+        return { ...prev, feedback, gameStatus: "lost" };
+      }
+
+      return {
+        ...prev,
+        feedback,
+        currentRow: prev.currentRow + 1,
+        currentCol: 0,
+      };
+    });
   }
 
   return (
@@ -160,22 +204,36 @@ export default function WordleBuilder() {
       </p>
 
       <section aria-label="Guess grid" className="flex flex-col items-center gap-2">
-        {guesses.map((row, rowIndex) => (
+        {game.guesses.map((row, rowIndex) => (
           <div key={rowIndex} className="flex gap-2">
-            {row.map((cell, colIndex) => (
-              <div
-                key={colIndex}
-                className="flex h-12 w-12 items-center justify-center rounded-md border-2 border-zinc-300 text-lg font-semibold text-zinc-950 dark:border-zinc-700 dark:text-zinc-50"
-              >
-                {cell}
-              </div>
-            ))}
+            {row.map((cell, colIndex) => {
+              const status = game.feedback[rowIndex]?.[colIndex];
+              return (
+                <div
+                  key={colIndex}
+                  className={`flex h-12 w-12 items-center justify-center rounded-md border-2 text-lg font-semibold transition-colors ${
+                    status
+                      ? CELL_STATUS_STYLES[status]
+                      : "border-zinc-300 text-zinc-950 dark:border-zinc-700 dark:text-zinc-50"
+                  }`}
+                >
+                  {cell}
+                </div>
+              );
+            })}
           </div>
         ))}
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          {isGameOver
-            ? "Out of guesses."
-            : `Row ${currentRow + 1} of ${guessCount}`}
+
+        <p
+          role="status"
+          className="mt-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+        >
+          {game.gameStatus === "won" &&
+            `Correct! "${selectedWord.word}" (${selectedWord.phonemes.join(" ")})`}
+          {game.gameStatus === "lost" &&
+            `Out of guesses. The word was "${selectedWord.word}" (${selectedWord.phonemes.join(" ")})`}
+          {game.gameStatus === "playing" &&
+            `Row ${game.currentRow + 1} of ${guessCount}`}
         </p>
       </section>
 
@@ -185,7 +243,7 @@ export default function WordleBuilder() {
           <button
             type="button"
             onClick={handleBackspace}
-            disabled={currentCol === 0}
+            disabled={!isPlaying || game.currentCol === 0}
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
           >
             Backspace
@@ -193,7 +251,7 @@ export default function WordleBuilder() {
           <button
             type="button"
             onClick={handleEnter}
-            disabled={!isRowFull || isGameOver}
+            disabled={!isPlaying || !isRowFull}
             className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
           >
             Enter
