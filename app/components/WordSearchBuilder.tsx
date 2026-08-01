@@ -1,0 +1,128 @@
+"use client";
+
+import { useState } from "react";
+import { WORD_LISTS, type Difficulty } from "../data/phonemes";
+import PhonemeKeyboard from "./PhonemeKeyboard";
+
+const DIFFICULTIES: Difficulty[] = [3, 4, 5];
+const WORD_BANK_SIZE = 5;
+const MIN_GRID_SIZE = 6;
+const MAX_GRID_SIZE = 20;
+const DEFAULT_GRID_SIZE = 10;
+
+function clampGridSize(value: number): number {
+  return Math.min(MAX_GRID_SIZE, Math.max(MIN_GRID_SIZE, value));
+}
+
+export default function WordSearchBuilder() {
+  const [difficulty, setDifficulty] = useState<Difficulty>(3);
+  const [showHints, setShowHints] = useState(true);
+  const [rows, setRows] = useState(DEFAULT_GRID_SIZE);
+  const [cols, setCols] = useState(DEFAULT_GRID_SIZE);
+
+  const wordBank = WORD_LISTS[difficulty].slice(0, WORD_BANK_SIZE);
+
+  return (
+    <div className="flex w-full flex-col items-center gap-8">
+      <section
+        aria-label="Activity settings"
+        className="grid w-full max-w-xl grid-cols-1 gap-4 rounded-lg border border-zinc-200 p-4 text-left sm:grid-cols-2 dark:border-zinc-800"
+      >
+        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Difficulty (phonemes per word)
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(Number(e.target.value) as Difficulty)}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
+          >
+            {DIFFICULTIES.map((d) => (
+              <option key={d} value={d}>
+                {d} phonemes
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <fieldset className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <legend>Show hints</legend>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 font-normal">
+              <input
+                type="radio"
+                name="show-hints"
+                checked={showHints}
+                onChange={() => setShowHints(true)}
+              />
+              Yes
+            </label>
+            <label className="flex items-center gap-2 font-normal">
+              <input
+                type="radio"
+                name="show-hints"
+                checked={!showHints}
+                onChange={() => setShowHints(false)}
+              />
+              No
+            </label>
+          </div>
+        </fieldset>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Grid rows
+          <input
+            type="number"
+            min={MIN_GRID_SIZE}
+            max={MAX_GRID_SIZE}
+            value={rows}
+            onChange={(e) => setRows(clampGridSize(Number(e.target.value)))}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Grid columns
+          <input
+            type="number"
+            min={MIN_GRID_SIZE}
+            max={MAX_GRID_SIZE}
+            value={cols}
+            onChange={(e) => setCols(clampGridSize(Number(e.target.value)))}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
+          />
+        </label>
+      </section>
+
+      <section
+        aria-label="Word bank"
+        className="w-full max-w-xl rounded-lg border border-zinc-200 p-4 text-left dark:border-zinc-800"
+      >
+        <h2 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Word bank ({wordBank.length} words)
+        </h2>
+        <ul className="flex flex-col gap-1">
+          {wordBank.map((entry) => (
+            <li
+              key={entry.word}
+              className="text-sm text-zinc-600 dark:text-zinc-400"
+            >
+              {entry.word} - {entry.phonemes.join(" ")}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section
+        aria-label="Word search preview"
+        className="flex w-full max-w-xl flex-col items-center gap-2"
+      >
+        <div className="flex h-64 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-500">
+          {rows}x{cols} puzzle preview will appear here
+        </div>
+      </section>
+
+      <section aria-label="Phoneme keyboard" className="w-full max-w-xl">
+        <PhonemeKeyboard showHints={showHints} />
+      </section>
+    </div>
+  );
+}
