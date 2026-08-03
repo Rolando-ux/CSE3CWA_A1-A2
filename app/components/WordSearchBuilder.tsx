@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { generatePuzzle, type WordSearchPuzzle } from "../lib/wordSearch";
 import PhonemeKeyboard from "./PhonemeKeyboard";
+import WordSearchGrid from "./WordSearchGrid";
 
 const DIFFICULTIES: Difficulty[] = [3, 4, 5];
 const WORD_BANK_SIZE = 5;
@@ -19,8 +21,23 @@ export default function WordSearchBuilder() {
   const [showHints, setShowHints] = useState(true);
   const [rows, setRows] = useState(DEFAULT_GRID_SIZE);
   const [cols, setCols] = useState(DEFAULT_GRID_SIZE);
+  const [puzzle, setPuzzle] = useState<WordSearchPuzzle | null>(null);
+  const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
 
   const wordBank = WORD_LISTS[difficulty].slice(0, WORD_BANK_SIZE);
+
+  function handleGenerate() {
+    setPuzzle(generatePuzzle(wordBank, rows, cols));
+    setFoundWords(new Set());
+  }
+
+  const handleWordFound = useCallback((word: string) => {
+    setFoundWords((prev) => new Set(prev).add(word));
+  }, []);
+
+  const placedWords = puzzle?.placements.map((p) => p.word) ?? [];
+  const allFound =
+    placedWords.length > 0 && placedWords.every((w) => foundWords.has(w));
 
   return (
     <div className="flex w-full flex-col items-center gap-8">
@@ -92,6 +109,14 @@ export default function WordSearchBuilder() {
         </label>
       </section>
 
+      <button
+        type="button"
+        onClick={handleGenerate}
+        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+      >
+        Generate Puzzle
+      </button>
+
       <section
         aria-label="Word bank"
         className="w-full max-w-xl rounded-lg border border-zinc-200 p-4 text-left dark:border-zinc-800"
@@ -100,24 +125,52 @@ export default function WordSearchBuilder() {
           Word bank ({wordBank.length} words)
         </h2>
         <ul className="flex flex-col gap-1">
-          {wordBank.map((entry) => (
-            <li
-              key={entry.word}
-              className="text-sm text-zinc-600 dark:text-zinc-400"
-            >
-              {entry.word} - {entry.phonemes.join(" ")}
-            </li>
-          ))}
+          {wordBank.map((entry) => {
+            const isFound = foundWords.has(entry.word);
+            return (
+              <li
+                key={entry.word}
+                className={`text-sm ${
+                  isFound
+                    ? "text-zinc-400 line-through dark:text-zinc-600"
+                    : "text-zinc-600 dark:text-zinc-400"
+                }`}
+              >
+                {entry.word} - {entry.phonemes.join(" ")}
+              </li>
+            );
+          })}
         </ul>
+        {puzzle && puzzle.unplaced.length > 0 && (
+          <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+            Could not fit: {puzzle.unplaced.join(", ")}. Try a larger grid.
+          </p>
+        )}
       </section>
 
       <section
         aria-label="Word search preview"
         className="flex w-full max-w-xl flex-col items-center gap-2"
       >
-        <div className="flex h-64 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-500">
-          {rows}x{cols} puzzle preview will appear here
-        </div>
+        {puzzle ? (
+          <>
+            <WordSearchGrid
+              grid={puzzle.grid}
+              placements={puzzle.placements}
+              foundWords={foundWords}
+              onWordFound={handleWordFound}
+            />
+            <p role="status" className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {allFound
+                ? "All words found!"
+                : `${foundWords.size} of ${placedWords.length} words found`}
+            </p>
+          </>
+        ) : (
+          <div className="flex h-64 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-500">
+            Click &quot;Generate Puzzle&quot; to create a {rows}x{cols} puzzle
+          </div>
+        )}
       </section>
 
       <section aria-label="Phoneme keyboard" className="w-full max-w-xl">
