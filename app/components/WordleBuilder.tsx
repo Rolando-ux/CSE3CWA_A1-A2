@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { PHONEME_KEYBOARD, WORD_LISTS, type Difficulty } from "../data/phonemes";
 import { evaluateGuess, type CellStatus } from "../lib/evaluateGuess";
+import { generateWordleHtml } from "../lib/generateWordleHtml";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 
 const DIFFICULTIES: Difficulty[] = [3, 4, 5];
@@ -123,6 +124,25 @@ export default function WordleBuilder() {
     });
   }
 
+  function handleDownload() {
+    const html = generateWordleHtml({
+      word: selectedWord.word,
+      phonemes: selectedWord.phonemes,
+      guessCount,
+      showHints,
+      keyboard: PHONEME_KEYBOARD,
+    });
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wordle-${selectedWord.word}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="flex w-full flex-col items-center gap-8">
       <section
@@ -197,6 +217,14 @@ export default function WordleBuilder() {
           />
         </label>
       </section>
+
+      <button
+        type="button"
+        onClick={handleDownload}
+        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+      >
+        Generate &amp; Download HTML
+      </button>
 
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Answer preview (teacher only): {selectedWord.word} -{" "}
