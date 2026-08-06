@@ -51,9 +51,10 @@ export function generateWordleHtml(config: WordleGeneratorConfig): string {
     font-size: 1.1rem; font-weight: 600;
     background: #fff;
   }
-  .cell.correct { background: #16a34a; border-color: #16a34a; color: #fff; }
-  .cell.present { background: #f59e0b; border-color: #f59e0b; color: #fff; }
-  .cell.absent { background: #94a3b8; border-color: #94a3b8; color: #fff; }
+  /* Colors meet WCAG AA contrast (>=4.5:1) for white text. */
+  .cell.correct { background: #15803d; border-color: #15803d; color: #fff; }
+  .cell.present { background: #b45309; border-color: #b45309; color: #fff; }
+  .cell.absent { background: #52525b; border-color: #52525b; color: #fff; }
   #status { min-height: 1.5em; font-weight: 600; margin-bottom: 16px; }
   .keyboard-section { margin-bottom: 8px; }
   .keyboard-label { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 6px; }

@@ -22,10 +22,14 @@ type GameState = {
   gameStatus: GameStatus;
 };
 
+// Colors chosen to meet WCAG AA contrast (>=4.5:1) for white text at any
+// size, in both light and dark mode - the default Tailwind 500/600 shades
+// (e.g. amber-500, green-600) fall as low as ~2:1 and fail even the 3:1
+// large-text minimum.
 const CELL_STATUS_STYLES: Record<CellStatus, string> = {
-  correct: "border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500",
-  present: "border-amber-500 bg-amber-500 text-white dark:border-amber-400 dark:bg-amber-400",
-  absent: "border-zinc-400 bg-zinc-400 text-white dark:border-zinc-600 dark:bg-zinc-600",
+  correct: "border-green-700 bg-green-700 text-white",
+  present: "border-amber-700 bg-amber-700 text-white",
+  absent: "border-zinc-600 bg-zinc-600 text-white",
 };
 
 function createGameState(guessCount: number, phonemeCount: number): GameState {
@@ -221,7 +225,7 @@ export default function WordleBuilder() {
       <button
         type="button"
         onClick={handleDownload}
-        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100"
       >
         Generate &amp; Download HTML
       </button>
@@ -272,7 +276,7 @@ export default function WordleBuilder() {
             type="button"
             onClick={handleBackspace}
             disabled={!isPlaying || game.currentCol === 0}
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900 dark:focus-visible:ring-zinc-100"
           >
             Backspace
           </button>
@@ -280,7 +284,7 @@ export default function WordleBuilder() {
             type="button"
             onClick={handleEnter}
             disabled={!isPlaying || !isRowFull}
-            className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100"
           >
             Enter
           </button>

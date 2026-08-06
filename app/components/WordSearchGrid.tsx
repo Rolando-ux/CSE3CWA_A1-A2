@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Placement } from "../lib/wordSearch";
 
 type Cell = { row: number; col: number };
@@ -46,6 +46,11 @@ export default function WordSearchGrid({
   const startCellRef = useRef<Cell | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionPath, setSelectionPath] = useState<Cell[]>([]);
+  // Separate from drag: lets mouse-click or keyboard (Enter/Space) users
+  // select a start cell, then a second activation on an end cell, as a
+  // fully keyboard-operable alternative to pointer-dragging.
+  const [anchorCell, setAnchorCell] = useState<Cell | null>(null);
+  const instructionsId = useId();
 
   const cols = grid[0]?.length ?? 0;
 
@@ -57,10 +62,50 @@ export default function WordSearchGrid({
     return { row: Number(row), col: Number(col) };
   }
 
+  function tryMatch(path: Cell[]) {
+    if (path.length < 2) return;
+    const pathKey = cellSetKey(path);
+    for (const placement of placements) {
+      if (foundWords.has(placement.word)) continue;
+      if (cellSetKey(placement.coords) === pathKey) {
+        onWordFound(placement.word);
+        break;
+      }
+    }
+  }
+
+  const foundCellKeys = new Set(
+    placements
+      .filter((p) => foundWords.has(p.word))
+      .flatMap((p) => p.coords.map((c) => `${c.row}-${c.col}`)),
+  );
+
   function handlePointerDown(cell: Cell) {
     startCellRef.current = cell;
     setIsSelecting(true);
     setSelectionPath([cell]);
+    setAnchorCell(null);
+  }
+
+  function handleCellActivate(cell: Cell) {
+    // A stray click after a completed drag, or clicking an already-found
+    // cell, shouldn't disturb the two-tap anchor state.
+    if (foundCellKeys.has(`${cell.row}-${cell.col}`)) return;
+    if (!anchorCell) {
+      setAnchorCell(cell);
+      return;
+    }
+    if (anchorCell.row === cell.row && anchorCell.col === cell.col) {
+      setAnchorCell(null);
+      return;
+    }
+    const path = getStraightLine(anchorCell, cell);
+    if (path) {
+      tryMatch(path);
+      setAnchorCell(null);
+    } else {
+      setAnchorCell(cell);
+    }
   }
 
   useEffect(() => {
@@ -77,17 +122,7 @@ export default function WordSearchGrid({
 
     function handlePointerUp() {
       setIsSelecting(false);
-      const path = selectionPath;
-      if (path.length > 1) {
-        const pathKey = cellSetKey(path);
-        for (const placement of placements) {
-          if (foundWords.has(placement.word)) continue;
-          if (cellSetKey(placement.coords) === pathKey) {
-            onWordFound(placement.word);
-            break;
-          }
-        }
-      }
+      tryMatch(selectionPath);
       setSelectionPath([]);
       startCellRef.current = null;
     }
@@ -98,53 +133,59 @@ export default function WordSearchGrid({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelecting, selectionPath, grid, placements, foundWords, onWordFound]);
 
-  const foundCellKeys = new Set(
-    placements
-      .filter((p) => foundWords.has(p.word))
-      .flatMap((p) => p.coords.map((c) => `${c.row}-${c.col}`)),
-  );
   const selectionCellKeys = new Set(
     selectionPath.map((c) => `${c.row}-${c.col}`),
   );
 
   return (
-    <div
-      ref={gridRef}
-      role="grid"
-      aria-label="Word search puzzle grid"
-      className="inline-grid touch-none gap-0.5 select-none"
-      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-    >
-      {grid.map((row, rowIndex) =>
-        row.map((symbol, colIndex) => {
-          const key = `${rowIndex}-${colIndex}`;
-          const isFound = foundCellKeys.has(key);
-          const isSelected = selectionCellKeys.has(key);
-          return (
-            <button
-              key={key}
-              type="button"
-              role="gridcell"
-              data-row={rowIndex}
-              data-col={colIndex}
-              onPointerDown={() =>
-                handlePointerDown({ row: rowIndex, col: colIndex })
-              }
-              className={`flex h-9 w-9 items-center justify-center rounded border text-sm font-semibold transition-colors ${
-                isFound
-                  ? "border-green-600 bg-green-600 text-white dark:border-green-500 dark:bg-green-500"
-                  : isSelected
-                    ? "border-amber-500 bg-amber-200 text-zinc-950 dark:border-amber-400 dark:bg-amber-900 dark:text-zinc-50"
-                    : "border-zinc-300 text-zinc-950 dark:border-zinc-700 dark:text-zinc-50"
-              }`}
-            >
-              {symbol}
-            </button>
-          );
-        }),
-      )}
+    <div className="flex flex-col items-center gap-2">
+      <p id={instructionsId} className="text-xs text-zinc-500 dark:text-zinc-400">
+        Drag across a word, or click/press Enter on the first letter then the
+        last letter.
+      </p>
+      <div
+        ref={gridRef}
+        aria-label="Word search puzzle grid"
+        aria-describedby={instructionsId}
+        className="grid w-full max-w-[420px] touch-none gap-0.5 select-none"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+      >
+        {grid.map((row, rowIndex) =>
+          row.map((symbol, colIndex) => {
+            const key = `${rowIndex}-${colIndex}`;
+            const isFound = foundCellKeys.has(key);
+            const isSelected = selectionCellKeys.has(key);
+            const isAnchored =
+              anchorCell?.row === rowIndex && anchorCell?.col === colIndex;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-label={`Row ${rowIndex + 1}, column ${colIndex + 1}: ${symbol}`}
+                aria-pressed={isAnchored}
+                data-row={rowIndex}
+                data-col={colIndex}
+                onPointerDown={() =>
+                  handlePointerDown({ row: rowIndex, col: colIndex })
+                }
+                onClick={() => handleCellActivate({ row: rowIndex, col: colIndex })}
+                className={`flex aspect-square min-w-0 items-center justify-center rounded border text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100 ${
+                  isFound
+                    ? "border-green-700 bg-green-700 text-white"
+                    : isSelected || isAnchored
+                      ? "border-amber-500 bg-amber-200 text-zinc-950 dark:border-amber-400 dark:bg-amber-900 dark:text-zinc-50"
+                      : "border-zinc-300 text-zinc-950 dark:border-zinc-700 dark:text-zinc-50"
+                }`}
+              >
+                {symbol}
+              </button>
+            );
+          }),
+        )}
+      </div>
     </div>
   );
 }

@@ -43,6 +43,7 @@ export function generateWordSearchHtml(config: WordSearchGeneratorConfig): strin
     margin: 0;
   }
   h1 { font-size: 1.5rem; margin-bottom: 16px; }
+  .instructions { font-size: 0.8rem; color: #64748b; margin: 0 0 8px; text-align: center; }
   #status { min-height: 1.5em; font-weight: 600; margin: 12px 0; }
   .word-bank {
     border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px;
@@ -50,23 +51,29 @@ export function generateWordSearchHtml(config: WordSearchGeneratorConfig): strin
   }
   .word-bank h2 { font-size: 0.9rem; margin: 0 0 8px; }
   .word-bank li { font-size: 0.9rem; margin-bottom: 2px; }
-  .word-bank li.found { color: #94a3b8; text-decoration: line-through; }
+  .word-bank li.found { color: #64748b; text-decoration: line-through; }
   #grid {
-    display: inline-grid;
+    display: grid;
+    width: 100%;
+    max-width: 420px;
     gap: 3px;
     margin-bottom: 20px;
     touch-action: none;
     user-select: none;
   }
   .cell {
-    width: 36px; height: 36px;
+    aspect-ratio: 1;
+    min-width: 0;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid #cbd5e1; border-radius: 4px;
     font-size: 0.9rem; font-weight: 600;
     background: #fff; cursor: pointer;
+    font-family: inherit; padding: 0;
   }
+  .cell:focus-visible { outline: 2px solid #0f172a; outline-offset: 2px; }
   .cell.selected { background: #fde68a; border-color: #f59e0b; }
-  .cell.found { background: #16a34a; border-color: #16a34a; color: #fff; }
+  /* WCAG AA contrast (>=4.5:1) for white text. */
+  .cell.found { background: #15803d; border-color: #15803d; color: #fff; }
   .keyboard-section { margin-top: 8px; }
   .keyboard-label { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 6px; }
   .keyboard-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; max-width: 480px; }
@@ -93,8 +100,11 @@ export function generateWordSearchHtml(config: WordSearchGeneratorConfig): strin
     <ul id="wordList"></ul>
   </div>
 
-  <div id="grid"></div>
-  <p id="status"></p>
+  <p id="instructions" class="instructions">
+    Drag across a word, or click/press Enter on the first letter then the last letter.
+  </p>
+  <div id="grid" aria-describedby="instructions"></div>
+  <p id="status" role="status" aria-live="polite"></p>
 
   <div class="keyboard-section">
     <div class="keyboard-label">Consonants</div>
@@ -167,12 +177,19 @@ function renderGrid() {
 
   GRID.forEach(function (rowArr, r) {
     rowArr.forEach(function (symbol, c) {
-      var cell = document.createElement("div");
+      var cell = document.createElement("button");
+      cell.type = "button";
       cell.className = "cell";
       cell.textContent = symbol;
       cell.dataset.row = r;
       cell.dataset.col = c;
+      cell.setAttribute("aria-label", "Row " + (r + 1) + ", column " + (c + 1) + ": " + symbol);
       if (foundCellKeys[r + "-" + c]) cell.classList.add("found");
+      if (anchorCell && anchorCell.row === r && anchorCell.col === c) {
+        cell.classList.add("selected");
+        cell.setAttribute("aria-pressed", "true");
+      }
+      cell.addEventListener("click", function () { handleCellActivate({ row: r, col: c }); });
       gridEl.appendChild(cell);
     });
   });
@@ -181,6 +198,58 @@ function renderGrid() {
 var isSelecting = false;
 var startCell = null;
 var selectionPath = [];
+var anchorCell = null;
+
+function tryMatch(path) {
+  if (path.length < 2) return;
+  var pathKey = cellSetKey(path);
+  for (var i = 0; i < PLACEMENTS.length; i++) {
+    var p = PLACEMENTS[i];
+    if (foundWords[p.word]) continue;
+    if (cellSetKey(p.coords) === pathKey) {
+      foundWords[p.word] = true;
+      break;
+    }
+  }
+}
+
+function isCellFound(cell) {
+  for (var i = 0; i < PLACEMENTS.length; i++) {
+    var p = PLACEMENTS[i];
+    if (!foundWords[p.word]) continue;
+    for (var j = 0; j < p.coords.length; j++) {
+      if (p.coords[j].row === cell.row && p.coords[j].col === cell.col) return true;
+    }
+  }
+  return false;
+}
+
+function handleCellActivate(cell) {
+  // A stray click after a completed drag, or clicking an already-found
+  // cell, shouldn't disturb the two-tap anchor state.
+  if (isCellFound(cell)) return;
+  if (!anchorCell) {
+    anchorCell = cell;
+    renderGrid();
+    return;
+  }
+  if (anchorCell.row === cell.row && anchorCell.col === cell.col) {
+    anchorCell = null;
+    renderGrid();
+    return;
+  }
+  var path = getStraightLine(anchorCell, cell);
+  anchorCell = null;
+  if (path) {
+    tryMatch(path);
+    renderGrid();
+    renderWordList();
+    renderStatus();
+  } else {
+    anchorCell = cell;
+    renderGrid();
+  }
+}
 
 function cellFromPoint(x, y) {
   var el = document.elementFromPoint(x, y);
@@ -223,17 +292,7 @@ window.addEventListener("pointermove", function (e) {
 window.addEventListener("pointerup", function () {
   if (!isSelecting) return;
   isSelecting = false;
-  if (selectionPath.length > 1) {
-    var pathKey = cellSetKey(selectionPath);
-    for (var i = 0; i < PLACEMENTS.length; i++) {
-      var p = PLACEMENTS[i];
-      if (foundWords[p.word]) continue;
-      if (cellSetKey(p.coords) === pathKey) {
-        foundWords[p.word] = true;
-        break;
-      }
-    }
-  }
+  tryMatch(selectionPath);
   selectionPath = [];
   startCell = null;
   renderGrid();
