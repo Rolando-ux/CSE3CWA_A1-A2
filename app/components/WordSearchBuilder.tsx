@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { PHONEME_KEYBOARD, WORD_LISTS, type Difficulty } from "../data/phonemes";
 import { generatePuzzle, type WordSearchPuzzle } from "../lib/wordSearch";
+import { generateWordSearchHtml } from "../lib/generateWordSearchHtml";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 import WordSearchGrid from "./WordSearchGrid";
 
@@ -29,6 +30,25 @@ export default function WordSearchBuilder() {
   function handleGenerate() {
     setPuzzle(generatePuzzle(wordBank, rows, cols));
     setFoundWords(new Set());
+  }
+
+  function handleDownload() {
+    if (!puzzle) return;
+    const html = generateWordSearchHtml({
+      grid: puzzle.grid,
+      placements: puzzle.placements,
+      showHints,
+      keyboard: PHONEME_KEYBOARD,
+    });
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "word-search.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   const handleWordFound = useCallback((word: string) => {
@@ -109,13 +129,23 @@ export default function WordSearchBuilder() {
         </label>
       </section>
 
-      <button
-        type="button"
-        onClick={handleGenerate}
-        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
-      >
-        Generate Puzzle
-      </button>
+      <div className="flex flex-wrap justify-center gap-3">
+        <button
+          type="button"
+          onClick={handleGenerate}
+          className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+        >
+          Generate Puzzle
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={!puzzle}
+          className="rounded-md border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-950 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
+        >
+          Download HTML
+        </button>
+      </div>
 
       <section
         aria-label="Word bank"
