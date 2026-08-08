@@ -36,9 +36,19 @@ export default function AboutPage() {
         Student No. {STUDENT_NUMBER}
       </p>
 
-      <p className="mt-6 max-w-xl text-zinc-600 dark:text-zinc-400">
-        A video walkthrough of this website will be embedded here.
-      </p>
+      <div className="mt-6 w-full max-w-2xl">
+        <h2 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Video walkthrough
+        </h2>
+        <video
+          controls
+          className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
+        >
+          <source src="/about-video.mp4" type="video/mp4" />
+          Your browser does not support embedded video. The walkthrough file
+          is included separately in the project submission.
+        </video>
+      </div>
     </div>
   );
 }
