@@ -39,6 +39,9 @@ yarn-error.log*
 # claude code local settings
 .claude/
 
+# recorded walkthrough video (large binary, submitted separately)
+/public/about-video.mp4
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

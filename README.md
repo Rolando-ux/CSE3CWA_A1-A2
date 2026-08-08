@@ -14,23 +14,39 @@ activity.
 
 The generated HTML file is self-contained: downloading it and opening it in any
 web browser will run the activity directly, with no dependency on this
-application.
-
-### Assessment 1 scope
-
-- Home page - project introduction and links to the two builders
-- About page - project description, student details, and a video walkthrough
-- Wordle page - builder and preview for a single phoneme-based Wordle activity
-- Word Search page - builder and preview for a phoneme-based word search
-  (~5 words)
-- Settings page - light/dark mode (stored in cookies) and layout preferences
-- Global layout: header with hamburger/kebab menu, footer with
-  copyright/name/student number/date
-- Accessibility-compliant markup throughout, including phoneme hover hints
-  (e.g. `/theta/` shown as `TH`, as in "thin")
+application. Both generators have been verified by saving their real output to
+disk and opening it via a `file://` URL outside the dev server.
 
 Assessment 1 is frontend only - it does not include a database or dynamic
 word-list management. Those features are introduced in later assessments.
+
+## Pages
+
+- **Home** - project introduction and links to the two builders
+- **About** - project description, student details, and a video walkthrough
+- **Wordle** - configure a phoneme-based word, difficulty, hint visibility
+  and guess count; preview it as a playable guessing game; download it as a
+  standalone HTML activity
+- **Word Search** - configure a phoneme word bank, difficulty and grid size;
+  generate and preview the puzzle (drag-to-select, or click/keyboard two-tap
+  selection); download it as a standalone HTML activity
+- **Settings** - light/dark theme, persisted via a cookie
+
+## Features
+
+- Header with hamburger menu, footer with copyright/name/student
+  number/date, and a cookie that restores the last visited page on a fresh
+  visit
+- Phoneme hint keyboard shared across the Wordle and Word Search builders,
+  with a mouse-over/keyboard-focus tooltip showing the English equivalent
+  (e.g. `θ` -> "TH (as in thin)")
+- WCAG AA colour contrast throughout, including the generated standalone
+  activities
+- Word Search grid is fully keyboard-operable (click/Enter two-tap
+  selection) as well as pointer-drag, in both the builder and the
+  downloaded activity
+- Responsive layout, verified down to a 375px mobile viewport including the
+  largest (20x20) Word Search grid
 
 ## Tech Stack
 
@@ -54,6 +70,11 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
+
+### Adding the About page video
+
+Place the recorded walkthrough video at `public/about-video.mp4` (this file is
+not committed to the repository). The About page will pick it up automatically.
 
 ## Available Scripts
 
