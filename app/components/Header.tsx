@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LAST_TAB_COOKIE, NAV_LINKS, STUDENT_NUMBER } from "../nav-links";
+import { ASSESSMENT_TITLE, LAST_TAB_COOKIE, NAV_LINKS } from "../nav-links";
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365;
 
@@ -19,7 +19,7 @@ export default function Header() {
     <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black">
       <div className="flex items-center justify-between px-4 py-3 sm:px-6">
         <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Student No. {STUDENT_NUMBER}
+          {ASSESSMENT_TITLE}
         </span>
 
         <div className="flex items-center gap-4">
