@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { PHONEME_KEYBOARD, WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { useCallback, useEffect, useState } from "react";
+import { PHONEME_KEYBOARD } from "../data/phonemes";
 import { generatePuzzle, type WordSearchPuzzle } from "../lib/wordSearch";
 import { generateWordSearchHtml } from "../lib/generateWordSearchHtml";
+import { fetchWordLists, type ApiWordList } from "../lib/wordListApi";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 import WordSearchGrid from "./WordSearchGrid";
 
-const DIFFICULTIES: Difficulty[] = [3, 4, 5];
 const WORD_BANK_SIZE = 5;
 const MIN_GRID_SIZE = 6;
 const MAX_GRID_SIZE = 20;
@@ -18,14 +18,26 @@ function clampGridSize(value: number): number {
 }
 
 export default function WordSearchBuilder() {
-  const [difficulty, setDifficulty] = useState<Difficulty>(3);
+  const [wordLists, setWordLists] = useState<ApiWordList[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [listId, setListId] = useState<number | null>(null);
   const [showHints, setShowHints] = useState(true);
   const [rows, setRows] = useState(DEFAULT_GRID_SIZE);
   const [cols, setCols] = useState(DEFAULT_GRID_SIZE);
   const [puzzle, setPuzzle] = useState<WordSearchPuzzle | null>(null);
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
 
-  const wordBank = WORD_LISTS[difficulty].slice(0, WORD_BANK_SIZE);
+  useEffect(() => {
+    fetchWordLists()
+      .then((lists) => {
+        setWordLists(lists);
+        if (lists.length > 0) setListId(lists[0].id);
+      })
+      .catch(() => setLoadError("Could not load word lists from the server."));
+  }, []);
+
+  const selectedList = wordLists.find((l) => l.id === listId) ?? wordLists[0];
+  const wordBank = (selectedList?.words ?? []).slice(0, WORD_BANK_SIZE);
 
   function handleGenerate() {
     setPuzzle(generatePuzzle(wordBank, rows, cols));
@@ -59,6 +71,22 @@ export default function WordSearchBuilder() {
   const allFound =
     placedWords.length > 0 && placedWords.every((w) => foundWords.has(w));
 
+  if (loadError) {
+    return (
+      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        {loadError}
+      </p>
+    );
+  }
+
+  if (!selectedList) {
+    return (
+      <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+        Loading word lists…
+      </p>
+    );
+  }
+
   return (
     <div className="flex w-full flex-col items-center gap-8">
       <section
@@ -66,15 +94,19 @@ export default function WordSearchBuilder() {
         className="grid w-full max-w-xl grid-cols-1 gap-4 rounded-lg border border-zinc-200 p-4 text-left sm:grid-cols-2 dark:border-zinc-800"
       >
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Difficulty (phonemes per word)
+          Word list
           <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(Number(e.target.value) as Difficulty)}
+            value={selectedList.id}
+            onChange={(e) => {
+              setListId(Number(e.target.value));
+              setPuzzle(null);
+              setFoundWords(new Set());
+            }}
             className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
           >
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>
-                {d} phonemes
+            {wordLists.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name} ({list.difficulty} phonemes)
               </option>
             ))}
           </select>

@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { PHONEME_KEYBOARD, WORD_LISTS, type Difficulty } from "../data/phonemes";
+import { useEffect, useState } from "react";
+import { PHONEME_KEYBOARD } from "../data/phonemes";
 import { evaluateGuess, type CellStatus } from "../lib/evaluateGuess";
 import { generateWordleHtml } from "../lib/generateWordleHtml";
+import { fetchWordLists, type ApiWordList } from "../lib/wordListApi";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 
-const DIFFICULTIES: Difficulty[] = [3, 4, 5];
 const MIN_GUESSES = 1;
 const MAX_GUESSES = 10;
 const DEFAULT_GUESSES = 6;
-const DEFAULT_DIFFICULTY: Difficulty = 3;
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -43,23 +42,38 @@ function createGameState(guessCount: number, phonemeCount: number): GameState {
 }
 
 export default function WordleBuilder() {
-  const [difficulty, setDifficulty] = useState<Difficulty>(DEFAULT_DIFFICULTY);
+  const [wordLists, setWordLists] = useState<ApiWordList[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [listId, setListId] = useState<number | null>(null);
   const [wordIndex, setWordIndex] = useState(0);
   const [showHints, setShowHints] = useState(true);
   const [guessCount, setGuessCount] = useState(DEFAULT_GUESSES);
-  const [game, setGame] = useState(() =>
-    createGameState(DEFAULT_GUESSES, DEFAULT_DIFFICULTY),
-  );
+  const [game, setGame] = useState(() => createGameState(DEFAULT_GUESSES, 3));
 
-  const wordList = WORD_LISTS[difficulty];
+  useEffect(() => {
+    fetchWordLists()
+      .then((lists) => {
+        setWordLists(lists);
+        if (lists.length > 0) {
+          setListId(lists[0].id);
+          setGame(createGameState(DEFAULT_GUESSES, lists[0].difficulty));
+        }
+      })
+      .catch(() => setLoadError("Could not load word lists from the server."));
+  }, []);
+
+  const selectedList = wordLists.find((l) => l.id === listId) ?? wordLists[0];
+  const wordList = selectedList?.words ?? [];
   const selectedWord = wordList[wordIndex];
+  const difficulty = selectedList?.difficulty ?? 0;
   const isPlaying = game.gameStatus === "playing";
   const isRowFull = game.currentCol === difficulty;
 
-  function handleDifficultyChange(nextDifficulty: Difficulty) {
-    setDifficulty(nextDifficulty);
+  function handleListChange(nextListId: number) {
+    setListId(nextListId);
     setWordIndex(0);
-    setGame(createGameState(guessCount, nextDifficulty));
+    const nextList = wordLists.find((l) => l.id === nextListId);
+    setGame(createGameState(guessCount, nextList?.difficulty ?? 0));
   }
 
   function handleWordChange(nextIndex: number) {
@@ -147,6 +161,22 @@ export default function WordleBuilder() {
     URL.revokeObjectURL(url);
   }
 
+  if (loadError) {
+    return (
+      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        {loadError}
+      </p>
+    );
+  }
+
+  if (!selectedList || !selectedWord) {
+    return (
+      <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+        Loading word lists…
+      </p>
+    );
+  }
+
   return (
     <div className="flex w-full flex-col items-center gap-8">
       <section
@@ -154,17 +184,15 @@ export default function WordleBuilder() {
         className="grid w-full max-w-xl grid-cols-1 gap-4 rounded-lg border border-zinc-200 p-4 text-left sm:grid-cols-2 dark:border-zinc-800"
       >
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Difficulty (phonemes per word)
+          Word list
           <select
-            value={difficulty}
-            onChange={(e) =>
-              handleDifficultyChange(Number(e.target.value) as Difficulty)
-            }
+            value={selectedList.id}
+            onChange={(e) => handleListChange(Number(e.target.value))}
             className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
           >
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>
-                {d} phonemes
+            {wordLists.map((list) => (
+              <option key={list.id} value={list.id}>
+                {list.name} ({list.difficulty} phonemes)
               </option>
             ))}
           </select>
