@@ -19,3 +19,17 @@ export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+/**
+ * Looks up PhonemeSymbol ids for a set of phoneme symbols, so WordPhoneme
+ * rows can carry the FK link in addition to the raw symbol text.
+ */
+export async function resolvePhonemeSymbolIds(
+  symbols: string[],
+): Promise<Map<string, number>> {
+  const rows = await prisma.phonemeSymbol.findMany({
+    where: { symbol: { in: symbols } },
+    select: { id: true, symbol: true },
+  });
+  return new Map(rows.map((r) => [r.symbol, r.id]));
+}
