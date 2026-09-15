@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Reference table for the phoneme keyboard shown to teachers.
+// Symbols are free-length strings (e.g. "p", "tʃ", "æɪ") since IPA
+// phonemes are not always a single character.
+model PhonemeSymbol {
+  id   Int    @id @default(autoincrement())
+  symbol String @unique
+  hint   String
+
+  wordPhonemes WordPhoneme[]
+}
+
+// A named collection of words at a given phoneme-count difficulty,
+// e.g. "3-phoneme starter words".
+model WordList {
+  id         Int      @id @default(autoincrement())
+  name       String
+  difficulty Int // number of phonemes per word in this list (3, 4 or 5)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  words      Word[]
+  activities Activity[]
+}
+
+model Word {
+  id         Int      @id @default(autoincrement())
+  text       String
+  wordListId Int
+  wordList   WordList @relation(fields: [wordListId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  phonemes WordPhoneme[]
+}
+
+// One phoneme occurrence within a word, kept in order via `position`.
+// Storing each phoneme as its own row (rather than splitting a string by
+// character) is what makes multi-character symbols like "tʃ" or "æɪ" safe.
+model WordPhoneme {
+  id       Int    @id @default(autoincrement())
+  wordId   Int
+  word     Word   @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  position Int
+  symbol   String
+
+  phonemeSymbolId Int?
+  phonemeSymbol   PhonemeSymbol? @relation(fields: [phonemeSymbolId], references: [id])
+
+  @@unique([wordId, position])
+}
+
+enum ActivityType {
+  WORDLE
+  WORD_SEARCH
+}
+
+// A saved, generatable activity configuration built from a word list.
+model Activity {
+  id         Int          @id @default(autoincrement())
+  name       String
+  type       ActivityType
+  wordListId Int
+  wordList   WordList     @relation(fields: [wordListId], references: [id], onDelete: Cascade)
+
+  hintsEnabled Boolean @default(true)
+
+  // Wordle-specific settings (null when type is WORD_SEARCH)
+  guessCount Int?
+
+  // Word Search-specific settings (null when type is WORDLE)
+  gridRows Int?
+  gridCols Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

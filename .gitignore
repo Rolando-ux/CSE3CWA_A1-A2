@@ -45,3 +45,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# prisma sqlite database (recreated via migrate + seed, not committed)
+/prisma/dev.db
+/prisma/dev.db-journal
+/dev.db
