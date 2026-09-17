@@ -8,11 +8,12 @@ export default function AboutPage() {
       </h1>
 
       <p className="mt-6 max-w-2xl text-zinc-600 dark:text-zinc-400">
-        The Phoneme Activity Builder is a frontend tool for Speech Pathology
-        teachers to create phoneme-based classroom activities. This is
-        Assessment 1 of the project and is frontend only - it does not yet
-        support a database or dynamic word-list management, both of which
-        will be introduced in later assessments.
+        The Phoneme Activity Builder is a full-stack tool for Speech
+        Pathology teachers to create phoneme-based classroom activities.
+        This is Assessment 2 of the project: word lists, phonemes and
+        activity settings are stored in a database and managed through a
+        backend API, and both builders generate activities from that
+        stored data.
       </p>
 
       <div className="mt-6 max-w-2xl space-y-4 text-left text-zinc-600 dark:text-zinc-400">
