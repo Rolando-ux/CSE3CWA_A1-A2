@@ -85,4 +85,65 @@ model Activity {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  generationLogs GenerationLog[]
+}
+
+enum GenerationStatus {
+  SUCCESS
+  FAILURE
+}
+
+// One row per attempt to generate a downloadable HTML activity. Powers the
+// successful/failed generation counts, most-used activity type and the
+// failure-rate alert on the dashboard.
+model GenerationLog {
+  id           Int              @id @default(autoincrement())
+  // Optional + SetNull so deleting an activity keeps its history (and the
+  // dashboard totals) intact.
+  activityId   Int?
+  activity     Activity?        @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  // Denormalised so usage-by-type still works after the activity is deleted.
+  activityType ActivityType
+  status       GenerationStatus
+  errorReason  String?
+  durationMs   Int
+  createdAt    DateTime         @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+// One row per page visit, recorded when the visitor leaves the page.
+// Powers the "average time on page" metric.
+model PageSession {
+  id              Int      @id @default(autoincrement())
+  path            String
+  durationSeconds Int
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+enum UsageEventType {
+  ACTIVITY_CREATED
+  ACTIVITY_UPDATED
+  ACTIVITY_DELETED
+  WORDLIST_CREATED
+  WORDLIST_UPDATED
+  WORDLIST_DELETED
+  VALIDATION_ERROR
+}
+
+// Timeline of builder actions: feeds the recent-activity feed, creation
+// counts over time and invalid-data warnings.
+model UsageEvent {
+  id           Int            @id @default(autoincrement())
+  type         UsageEventType
+  activityType ActivityType?
+  detail       String?
+  createdAt    DateTime       @default(now())
+
+  @@index([createdAt])
+  @@index([type])
 }
