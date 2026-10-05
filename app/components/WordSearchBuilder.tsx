@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PHONEME_KEYBOARD } from "../data/phonemes";
 import { generatePuzzle, type WordSearchPuzzle } from "../lib/wordSearch";
-import { generateWordSearchHtml } from "../lib/generateWordSearchHtml";
+import { downloadGeneratedActivity } from "../lib/generateApi";
 import { fetchWordLists, type ApiWordList } from "../lib/wordListApi";
+import GenerateMessage, { type GenerateMessageState } from "./GenerateMessage";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 import WordSearchGrid from "./WordSearchGrid";
 
@@ -26,6 +26,9 @@ export default function WordSearchBuilder() {
   const [cols, setCols] = useState(DEFAULT_GRID_SIZE);
   const [puzzle, setPuzzle] = useState<WordSearchPuzzle | null>(null);
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateMessage, setGenerateMessage] =
+    useState<GenerateMessageState | null>(null);
 
   useEffect(() => {
     fetchWordLists()
@@ -42,25 +45,33 @@ export default function WordSearchBuilder() {
   function handleGenerate() {
     setPuzzle(generatePuzzle(wordBank, rows, cols));
     setFoundWords(new Set());
+    setGenerateMessage(null);
   }
 
-  function handleDownload() {
+  async function handleDownload() {
     if (!puzzle) return;
-    const html = generateWordSearchHtml({
-      grid: puzzle.grid,
-      placements: puzzle.placements,
-      showHints,
-      keyboard: PHONEME_KEYBOARD,
-    });
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "word-search.html";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setIsGenerating(true);
+    setGenerateMessage(null);
+    try {
+      // The previewed puzzle is sent so the file matches what the teacher
+      // sees; the server re-checks it against the stored words.
+      const filename = await downloadGeneratedActivity({
+        type: "WORD_SEARCH",
+        wordListId: selectedList.id,
+        hintsEnabled: showHints,
+        gridRows: rows,
+        gridCols: cols,
+        puzzle: { grid: puzzle.grid, placements: puzzle.placements },
+      });
+      setGenerateMessage({ kind: "success", text: `Downloaded ${filename}` });
+    } catch (err) {
+      setGenerateMessage({
+        kind: "error",
+        text: err instanceof Error ? err.message : "Could not generate the activity.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   const handleWordFound = useCallback((word: string) => {
@@ -101,6 +112,7 @@ export default function WordSearchBuilder() {
               setListId(Number(e.target.value));
               setPuzzle(null);
               setFoundWords(new Set());
+              setGenerateMessage(null);
             }}
             className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 dark:border-zinc-700 dark:bg-black dark:text-zinc-50"
           >
@@ -172,12 +184,14 @@ export default function WordSearchBuilder() {
         <button
           type="button"
           onClick={handleDownload}
-          disabled={!puzzle}
+          disabled={!puzzle || isGenerating}
           className="rounded-md border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-950 hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900 dark:focus-visible:ring-zinc-100"
         >
-          Download HTML
+          {isGenerating ? "Generating…" : "Download HTML"}
         </button>
       </div>
+
+      <GenerateMessage message={generateMessage} />
 
       <section
         aria-label="Word bank"
