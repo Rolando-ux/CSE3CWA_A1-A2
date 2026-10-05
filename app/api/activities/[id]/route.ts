@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { handleApiError } from "../../../lib/apiError";
+import { logEvent } from "../../../lib/metrics";
 import { parseActivityInput, parseId, ValidationError } from "../../../lib/validation";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -34,6 +35,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const input = parseActivityInput(body);
     const activity = await prisma.activity.update({ where: { id }, data: input });
+    await logEvent({
+      type: "ACTIVITY_UPDATED",
+      activityType: activity.type,
+      detail: `Updated "${activity.name}"`,
+    });
     return NextResponse.json({ data: activity });
   } catch (err) {
     return handleApiError(err);
@@ -43,7 +49,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const id = parseId((await params).id);
-    await prisma.activity.delete({ where: { id } });
+    const activity = await prisma.activity.delete({ where: { id } });
+    await logEvent({
+      type: "ACTIVITY_DELETED",
+      activityType: activity.type,
+      detail: `Deleted "${activity.name}"`,
+    });
     return NextResponse.json({ data: { id } });
   } catch (err) {
     return handleApiError(err);

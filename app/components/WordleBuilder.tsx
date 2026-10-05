@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PHONEME_KEYBOARD } from "../data/phonemes";
 import { evaluateGuess, type CellStatus } from "../lib/evaluateGuess";
-import { generateWordleHtml } from "../lib/generateWordleHtml";
+import { downloadGeneratedActivity } from "../lib/generateApi";
 import { fetchWordLists, type ApiWordList } from "../lib/wordListApi";
+import GenerateMessage, { type GenerateMessageState } from "./GenerateMessage";
 import PhonemeKeyboard from "./PhonemeKeyboard";
 
 const MIN_GUESSES = 1;
@@ -49,6 +49,9 @@ export default function WordleBuilder() {
   const [showHints, setShowHints] = useState(true);
   const [guessCount, setGuessCount] = useState(DEFAULT_GUESSES);
   const [game, setGame] = useState(() => createGameState(DEFAULT_GUESSES, 3));
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateMessage, setGenerateMessage] =
+    useState<GenerateMessageState | null>(null);
 
   useEffect(() => {
     fetchWordLists()
@@ -142,23 +145,26 @@ export default function WordleBuilder() {
     });
   }
 
-  function handleDownload() {
-    const html = generateWordleHtml({
-      word: selectedWord.word,
-      phonemes: selectedWord.phonemes,
-      guessCount,
-      showHints,
-      keyboard: PHONEME_KEYBOARD,
-    });
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wordle-${selectedWord.word}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  async function handleDownload() {
+    setIsGenerating(true);
+    setGenerateMessage(null);
+    try {
+      const filename = await downloadGeneratedActivity({
+        type: "WORDLE",
+        wordListId: selectedList.id,
+        word: selectedWord.word,
+        guessCount,
+        hintsEnabled: showHints,
+      });
+      setGenerateMessage({ kind: "success", text: `Downloaded ${filename}` });
+    } catch (err) {
+      setGenerateMessage({
+        kind: "error",
+        text: err instanceof Error ? err.message : "Could not generate the activity.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   if (loadError) {
@@ -253,10 +259,13 @@ export default function WordleBuilder() {
       <button
         type="button"
         onClick={handleDownload}
-        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100"
+        disabled={isGenerating}
+        className="rounded-md bg-zinc-950 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100"
       >
-        Generate &amp; Download HTML
+        {isGenerating ? "Generating…" : "Generate & Download HTML"}
       </button>
+
+      <GenerateMessage message={generateMessage} />
 
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Answer preview (teacher only): {selectedWord.word} -{" "}

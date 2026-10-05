@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, resolvePhonemeSymbolIds } from "../../../../lib/prisma";
 import { handleApiError } from "../../../../lib/apiError";
+import { logEvent } from "../../../../lib/metrics";
 import { parseId, parseWordInput, ValidationError } from "../../../../lib/validation";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -32,6 +33,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       include: { phonemes: { orderBy: { position: "asc" } } },
     });
 
+    await logEvent({
+      type: "WORDLIST_UPDATED",
+      detail: `Added word "${word.text}" to "${wordList.name}"`,
+    });
     return NextResponse.json({ data: word }, { status: 201 });
   } catch (err) {
     if (err instanceof ValidationError && err.message === "Word list not found.") {
