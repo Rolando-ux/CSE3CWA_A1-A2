@@ -1,4 +1,5 @@
 import { PHONEME_HINTS } from "../data/phonemes";
+import { NAV_LINKS } from "../nav-links";
 import type { Placement } from "./wordSearch";
 
 export class ValidationError extends Error {
@@ -294,6 +295,31 @@ export function parseGenerateInput(body: unknown): GenerateInput {
     gridCols: cols,
     puzzle: puzzle === undefined ? undefined : parsePuzzle(puzzle, rows, cols),
   };
+}
+
+// Pages that report time-on-page. Restricting to known paths stops arbitrary
+// strings being written into the table by anyone who can reach the API.
+const TRACKED_PATHS = new Set([...NAV_LINKS.map((link) => link.href), "/dashboard"]);
+
+export type PageSessionInput = {
+  path: string;
+  durationSeconds: number;
+};
+
+export function parsePageSessionInput(body: unknown): PageSessionInput {
+  if (typeof body !== "object" || body === null) {
+    throw new ValidationError("Request body must be a JSON object.");
+  }
+  const { path, durationSeconds } = body as Record<string, unknown>;
+
+  if (typeof path !== "string" || !TRACKED_PATHS.has(path)) {
+    throw new ValidationError("`path` must be one of the application's pages.");
+  }
+  if (typeof durationSeconds !== "number" || !Number.isFinite(durationSeconds) || durationSeconds < 0) {
+    throw new ValidationError("`durationSeconds` must be a non-negative number.");
+  }
+
+  return { path, durationSeconds: Math.round(durationSeconds) };
 }
 
 export function parseId(raw: string): number {
