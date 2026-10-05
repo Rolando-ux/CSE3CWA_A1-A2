@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, resolvePhonemeSymbolIds } from "../../../lib/prisma";
 import { handleApiError } from "../../../lib/apiError";
+import { logEvent } from "../../../lib/metrics";
 import { parseId, parseWordInput, ValidationError } from "../../../lib/validation";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -57,6 +58,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       });
     });
 
+    await logEvent({
+      type: "WORDLIST_UPDATED",
+      detail: `Edited word "${word.text}" in "${existing.wordList.name}"`,
+    });
     return NextResponse.json({ data: word });
   } catch (err) {
     if (err instanceof ValidationError && err.message === "Word not found.") {
@@ -69,7 +74,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const id = parseId((await params).id);
-    await prisma.word.delete({ where: { id } });
+    const word = await prisma.word.delete({ where: { id } });
+    await logEvent({
+      type: "WORDLIST_UPDATED",
+      detail: `Removed word "${word.text}"`,
+    });
     return NextResponse.json({ data: { id } });
   } catch (err) {
     return handleApiError(err);

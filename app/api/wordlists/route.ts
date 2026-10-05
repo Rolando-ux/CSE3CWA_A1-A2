@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import { handleApiError } from "../../lib/apiError";
+import { logEvent } from "../../lib/metrics";
 import { parseWordListInput } from "../../lib/validation";
 
 export async function GET(request: Request) {
@@ -20,6 +21,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const input = parseWordListInput(body);
     const wordList = await prisma.wordList.create({ data: input });
+    await logEvent({
+      type: "WORDLIST_CREATED",
+      detail: `Created word list "${wordList.name}"`,
+    });
     return NextResponse.json({ data: wordList }, { status: 201 });
   } catch (err) {
     return handleApiError(err);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logEvent } from "./metrics";
 import { ValidationError } from "./validation";
 
 const PRISMA_NOT_FOUND = "P2025";
@@ -13,12 +14,19 @@ function isPrismaKnownError(err: unknown): err is { code: string; message: strin
   );
 }
 
-export function handleApiError(err: unknown): NextResponse {
+/**
+ * Turns a thrown error into the right JSON response. Invalid input is also
+ * recorded as a VALIDATION_ERROR usage event so the dashboard can warn about
+ * it - done here once, so every route is covered.
+ */
+export async function handleApiError(err: unknown): Promise<NextResponse> {
   if (err instanceof ValidationError) {
+    await logEvent({ type: "VALIDATION_ERROR", detail: err.message });
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 
   if (err instanceof SyntaxError) {
+    await logEvent({ type: "VALIDATION_ERROR", detail: "Malformed JSON body" });
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 

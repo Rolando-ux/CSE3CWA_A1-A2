@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { handleApiError } from "../../../lib/apiError";
+import { logEvent } from "../../../lib/metrics";
 import { parseId, parseWordListInput, ValidationError } from "../../../lib/validation";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -33,6 +34,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const input = parseWordListInput(body);
     const wordList = await prisma.wordList.update({ where: { id }, data: input });
+    await logEvent({
+      type: "WORDLIST_UPDATED",
+      detail: `Updated word list "${wordList.name}"`,
+    });
     return NextResponse.json({ data: wordList });
   } catch (err) {
     return handleApiError(err);
@@ -42,7 +47,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const id = parseId((await params).id);
-    await prisma.wordList.delete({ where: { id } });
+    const wordList = await prisma.wordList.delete({ where: { id } });
+    await logEvent({
+      type: "WORDLIST_DELETED",
+      detail: `Deleted word list "${wordList.name}"`,
+    });
     return NextResponse.json({ data: { id } });
   } catch (err) {
     return handleApiError(err);

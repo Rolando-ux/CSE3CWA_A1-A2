@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import { handleApiError } from "../../lib/apiError";
+import { logEvent } from "../../lib/metrics";
 import { parseActivityInput } from "../../lib/validation";
 
 export async function GET() {
@@ -16,6 +17,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const input = parseActivityInput(body);
     const activity = await prisma.activity.create({ data: input });
+    await logEvent({
+      type: "ACTIVITY_CREATED",
+      activityType: activity.type,
+      detail: `Created "${activity.name}"`,
+    });
     return NextResponse.json({ data: activity }, { status: 201 });
   } catch (err) {
     return handleApiError(err);

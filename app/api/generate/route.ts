@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "../../lib/apiError";
 import { GenerationError, generateActivity } from "../../lib/generateActivity";
-import { logEvent, logGeneration } from "../../lib/metrics";
-import { parseGenerateInput, ValidationError, type GenerateInput } from "../../lib/validation";
+import { logGeneration } from "../../lib/metrics";
+import { parseGenerateInput, type GenerateInput } from "../../lib/validation";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
@@ -11,15 +11,8 @@ export async function POST(request: Request) {
   try {
     input = parseGenerateInput(await request.json());
   } catch (err) {
-    // Bad input never reaches generation, so it is recorded as an invalid-data
-    // event rather than a failed generation.
-    if (err instanceof ValidationError || err instanceof SyntaxError) {
-      await logEvent({
-        type: "VALIDATION_ERROR",
-        detail:
-          err instanceof ValidationError ? err.message : "Malformed JSON body",
-      });
-    }
+    // Bad input never reaches generation: handleApiError returns the 400 and
+    // records it as a VALIDATION_ERROR event rather than a failed generation.
     return handleApiError(err);
   }
 
