@@ -1,24 +1,45 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "../../lib/apiError";
-import { GenerationError, generateActivity } from "../../lib/generateActivity";
+import {
+  GenerationError,
+  generateActivity,
+  inputFromActivity,
+} from "../../lib/generateActivity";
 import { logGeneration } from "../../lib/metrics";
-import { parseGenerateInput, type GenerateInput } from "../../lib/validation";
+import {
+  isActivityGenerateRequest,
+  parseActivityGenerateInput,
+  parseGenerateInput,
+  type GenerateInput,
+} from "../../lib/validation";
 
+// Two ways in: explicit settings from a builder, or { activityId } to build
+// from a saved activity's stored settings.
 export async function POST(request: Request) {
   const startedAt = performance.now();
 
   let input: GenerateInput;
+  let activityId: number | null = null;
   try {
-    input = parseGenerateInput(await request.json());
+    const body = await request.json();
+    if (isActivityGenerateRequest(body)) {
+      ({ input, activityId } = await inputFromActivity(parseActivityGenerateInput(body)));
+    } else {
+      input = parseGenerateInput(body);
+    }
   } catch (err) {
     // Bad input never reaches generation: handleApiError returns the 400 and
     // records it as a VALIDATION_ERROR event rather than a failed generation.
+    if (err instanceof GenerationError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return handleApiError(err);
   }
 
   try {
     const { html, filename } = await generateActivity(input);
     await logGeneration({
+      activityId,
       activityType: input.type,
       status: "SUCCESS",
       durationMs: performance.now() - startedAt,
@@ -34,6 +55,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     await logGeneration({
+      activityId,
       activityType: input.type,
       status: "FAILURE",
       errorReason:
