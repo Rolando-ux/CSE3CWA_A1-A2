@@ -5,13 +5,14 @@ import type {
 } from "../generated/prisma/client";
 import { checkHealth, type HealthReport } from "./health";
 import { prisma } from "./prisma";
+import {
+  FAILURE_RATE_MIN_ATTEMPTS,
+  FAILURE_RATE_WARNING_PCT,
+  RECENT_WINDOW_DAYS,
+  VALIDATION_ERRORS_WARNING,
+} from "./thresholds";
 
-// Alert thresholds. Kept together so they are easy to find and explain.
 const CHART_DAYS = 30;
-const RECENT_WINDOW_DAYS = 7;
-const FAILURE_RATE_WARNING_PCT = 15;
-const FAILURE_RATE_MIN_ATTEMPTS = 10; // too few attempts make a rate meaningless
-const VALIDATION_ERRORS_WARNING = 5; // in the last 24 hours
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type AlertLevel = "error" | "warning" | "info";
