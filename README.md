@@ -99,6 +99,8 @@ records dated in the future. Real usage is recorded alongside it.
 - [Prisma](https://www.prisma.io) ORM with SQLite
 - ESLint
 - Docker
+- [Playwright](https://playwright.dev) (end-to-end tests), [Apache JMeter](https://jmeter.apache.org)
+  (load tests) and [Lighthouse](https://github.com/GoogleChrome/lighthouse) (accessibility and performance)
 
 ## Database and API
 
@@ -167,6 +169,87 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to view the 
 Place the recorded walkthrough video at `public/about-video.mp4` (this file is
 not committed to the repository). The About page will pick it up automatically.
 
+## Testing
+
+Three kinds of testing are set up. All of them run against a **throwaway
+database** (`test.db`) on port 3100, so they never touch the development data
+(`dev.db`) or a dev server running on port 3000. The scripts for JMeter and
+Lighthouse are written for Windows.
+
+### End-to-end tests (Playwright)
+
+```bash
+npm install
+npx playwright install chromium   # once: Playwright's own browser
+npm run test:e2e                  # build, start a test server, run everything
+npm run test:e2e:headed           # the same, with a visible browser window
+npm run test:e2e:report           # open the HTML report of the last run
+```
+
+16 tests drive the real production build in a browser:
+
+- **User use case** - a teacher builds a Wordle or Word Search and downloads it,
+  then the test opens the *downloaded file* and plays it to the end (winning,
+  losing, hints on and off, and a guess limit that carries into the file; a
+  Word Search is solved by clicking, by dragging and by keyboard).
+- **Builder use case** - create, read, update and delete a word list, a word and an
+  activity, including invalid input being refused, with each change checked on
+  the dashboard.
+- **Dashboard** - health and key figures, the empty-word-list alert, generating
+  from a saved activity, the failed-generation path, report filters and the CSV
+  export.
+- **Smoke tests** - every page loads, with no script errors or broken requests
+  (the git-ignored About page video is the one allowed 404).
+
+These tests found two real bugs in the downloaded Word Search, both now fixed
+and covered by regression tests (`tests/e2e/generated-word-search.spec.ts`): mouse
+clicks on a cell were lost because the grid was rebuilt before the click arrived,
+and a word sharing its first or last cell with an already-found word could not
+be selected by click or keyboard.
+
+### Load tests (Apache JMeter)
+
+`jmeter/phoneme-builder-load-test.jmx` simulates users who browse the builder,
+create and delete an activity, generate a file from a saved activity, and load
+the dashboard figures. `jmeter/run-load-test.ps1` runs it at 1, 10, 100, 1,000 and
+10,000 virtual users, each against a fresh database, while recording the
+server's CPU and memory.
+
+```powershell
+# needs Apache JMeter 5.6.3 (use -JMeterHome if it is not in C:\Users\<you>\tools)
+powershell -ExecutionPolicy Bypass -File jmeter\run-load-test.ps1
+node jmeter/summarize-results.mjs
+```
+
+| Users | Errors | Mean response | 95th percentile |
+|---:|---:|---:|---:|
+| 1 | 0% | 9 ms | 16 ms |
+| 10 | 0% | 8 ms | 17 ms |
+| 100 | 0% | 239 ms | 359 ms |
+| 1,000 | 30% | 2,366 ms | 4,708 ms |
+| 10,000 | 88% | 369 ms | 2,222 ms |
+
+Up to 100 users the app answers without errors, but at 100 its single CPU core is
+already full. Beyond that the operating system starts refusing connections; the
+server never crashed, kept its data consistent, and recovered when the load
+dropped. The full tables are in [`jmeter/RESULTS.md`](jmeter/RESULTS.md) and the
+explanation in [`jmeter/ANALYSIS.md`](jmeter/ANALYSIS.md).
+
+### Accessibility and performance (Lighthouse)
+
+```bash
+node lighthouse/run-lighthouse.mjs --label run   # all pages, mobile and desktop
+node lighthouse/summarize.mjs before after       # compare two labelled runs
+```
+
+This builds the app, serves it on the throwaway database and runs Lighthouse
+13.5.0 (fetched with `npx`) using Playwright's Chromium. **Accessibility scores
+100 on every page, in mobile and desktop modes.** Lighthouse also found a
+layout-shift problem (content pushing the footer around while the dashboard
+loaded; 0.738 on desktop), which was fixed by reserving space while loading.
+Results, including what the earlier accessibility fixes were worth, are in
+[`lighthouse/RESULTS.md`](lighthouse/RESULTS.md).
+
 ## Running with Docker
 
 The application can also be built and run in a Docker container:
@@ -192,3 +275,7 @@ there.
 - `npm run db:seed-usage` - reset and reseed the simulated usage records
 - `npm run db:view` - print a summary of the current database contents,
   including the usage statistics
+- `npm run test:db` - build the throwaway test database (`test.db`)
+- `npm run test:e2e` - run the Playwright end-to-end tests
+- `npm run test:e2e:headed` - the same, in a visible browser
+- `npm run test:e2e:report` - open the Playwright HTML report
