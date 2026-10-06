@@ -172,7 +172,8 @@ export type GenerateInput =
       type: "WORDLE";
       wordListId: number;
       hintsEnabled: boolean;
-      word: string;
+      /** Required on direct requests; random from the list when built from an Activity. */
+      word?: string;
       guessCount: number;
     }
   | {
@@ -297,9 +298,86 @@ export function parseGenerateInput(body: unknown): GenerateInput {
   };
 }
 
+/** Generate from a saved Activity: its stored settings drive the output. */
+export type ActivityGenerateInput = {
+  activityId: number;
+  /** Wordle only; a random word from the activity's list is used if omitted. */
+  word?: string;
+};
+
+export function isActivityGenerateRequest(body: unknown): boolean {
+  return typeof body === "object" && body !== null && "activityId" in body;
+}
+
+export function parseActivityGenerateInput(body: unknown): ActivityGenerateInput {
+  if (typeof body !== "object" || body === null) {
+    throw new ValidationError("Request body must be a JSON object.");
+  }
+  const { activityId, word } = body as Record<string, unknown>;
+
+  if (typeof activityId !== "number" || !Number.isInteger(activityId) || activityId < 1) {
+    throw new ValidationError("`activityId` must be a positive integer.");
+  }
+  if (word !== undefined && (typeof word !== "string" || word.trim().length === 0)) {
+    throw new ValidationError("`word` must be a non-empty string when provided.");
+  }
+
+  return { activityId, word: word === undefined ? undefined : (word as string).trim() };
+}
+
+const REPORT_PAGE_SIZE_MAX = 50;
+const REPORT_PAGE_MAX = 10000;
+
+export type ReportQuery = {
+  status?: "SUCCESS" | "FAILURE";
+  type?: "WORDLE" | "WORD_SEARCH";
+  page: number;
+  pageSize: number;
+  format: "json" | "csv";
+};
+
+function optionalChoice<T extends string>(
+  params: URLSearchParams,
+  key: string,
+  allowed: readonly T[],
+): T | undefined {
+  const value = params.get(key);
+  if (value === null || value === "") return undefined; // "" means "all"
+  if (!allowed.includes(value as T)) {
+    throw new ValidationError(`\`${key}\` must be one of ${allowed.join(", ")}.`);
+  }
+  return value as T;
+}
+
+function queryInteger(
+  params: URLSearchParams,
+  key: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const raw = params.get(key);
+  if (raw === null || raw === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new ValidationError(`\`${key}\` must be an integer between ${min} and ${max}.`);
+  }
+  return value;
+}
+
+export function parseReportQuery(params: URLSearchParams): ReportQuery {
+  return {
+    status: optionalChoice(params, "status", ["SUCCESS", "FAILURE"] as const),
+    type: optionalChoice(params, "type", VALID_ACTIVITY_TYPES as readonly ("WORDLE" | "WORD_SEARCH")[]),
+    page: queryInteger(params, "page", 1, 1, REPORT_PAGE_MAX),
+    pageSize: queryInteger(params, "pageSize", 10, 1, REPORT_PAGE_SIZE_MAX),
+    format: optionalChoice(params, "format", ["json", "csv"] as const) ?? "json",
+  };
+}
+
 // Pages that report time-on-page. Restricting to known paths stops arbitrary
 // strings being written into the table by anyone who can reach the API.
-const TRACKED_PATHS = new Set([...NAV_LINKS.map((link) => link.href), "/dashboard"]);
+const TRACKED_PATHS = new Set(NAV_LINKS.map((link) => link.href));
 
 export type PageSessionInput = {
   path: string;

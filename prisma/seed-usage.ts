@@ -31,11 +31,16 @@ function pick<T>(items: readonly T[]): T {
   return items[Math.floor(random() * items.length)];
 }
 
-// Random moment within a given day, biased toward daytime hours.
+// Random moment within a given day, biased toward daytime hours. Never in the
+// future: a record "from today" that is dated later than now would sort above
+// real activity in newest-first views.
 function timeOnDay(daysAgo: number): Date {
   const hour = between(8, 20);
   const day = new Date(Date.now() - daysAgo * DAY_MS);
   day.setHours(hour, between(0, 59), between(0, 59), 0);
+  if (day.getTime() > Date.now()) {
+    return new Date(Date.now() - between(1, 3 * 60 * 60) * 1000);
+  }
   return day;
 }
 

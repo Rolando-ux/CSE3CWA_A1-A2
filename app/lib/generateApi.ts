@@ -1,15 +1,20 @@
-import type { GenerateInput } from "./validation";
+import type { ActivityGenerateInput, GenerateInput } from "./validation";
 
-/** What the builders send; the server fills in the rest from the database. */
-export type GenerateRequest = GenerateInput;
+/** Either explicit settings (the builders) or a saved activity's id. */
+export type GenerateRequest = GenerateInput | ActivityGenerateInput;
+
+export type GeneratedFile = {
+  html: string;
+  filename: string;
+};
 
 function filenameFromHeader(header: string | null, fallback: string): string {
   const match = header?.match(/filename="([^"]+)"/);
   return match?.[1] ?? fallback;
 }
 
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
+function saveFile(html: string, filename: string) {
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
@@ -20,13 +25,13 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 /**
- * Asks the server to generate an activity and saves the returned HTML file.
- * Resolves with the saved filename; rejects with a teacher-readable message
- * when the server refuses (invalid data, empty list, grid too small, ...).
+ * Asks the server to generate an activity and returns the HTML. Rejects with
+ * a teacher-readable message when the server refuses (invalid data, empty
+ * list, grid too small, ...).
  */
-export async function downloadGeneratedActivity(
+export async function requestGeneratedActivity(
   request: GenerateRequest,
-): Promise<string> {
+): Promise<GeneratedFile> {
   let res: Response;
   try {
     res = await fetch("/api/generate", {
@@ -47,10 +52,19 @@ export async function downloadGeneratedActivity(
     );
   }
 
-  const filename = filenameFromHeader(
-    res.headers.get("Content-Disposition"),
-    request.type === "WORDLE" ? "wordle.html" : "word-search.html",
-  );
-  saveBlob(await res.blob(), filename);
+  const fallback =
+    "type" in request && request.type === "WORDLE" ? "wordle.html" : "activity.html";
+  return {
+    html: await res.text(),
+    filename: filenameFromHeader(res.headers.get("Content-Disposition"), fallback),
+  };
+}
+
+/** Generates an activity and saves it as a download. Resolves with the filename. */
+export async function downloadGeneratedActivity(
+  request: GenerateRequest,
+): Promise<string> {
+  const { html, filename } = await requestGeneratedActivity(request);
+  saveFile(html, filename);
   return filename;
 }

@@ -243,13 +243,16 @@ export default function WordSearchBuilder() {
             </p>
           </>
         ) : (
-          <div className="flex h-64 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-500">
+          <div className="flex h-64 w-full items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
             Click &quot;Generate Puzzle&quot; to create a {rows}x{cols} puzzle
           </div>
         )}
       </section>
 
-      <section aria-label="Phoneme keyboard" className="w-full max-w-xl">
+      <section aria-labelledby="keyboard-heading" className="w-full max-w-xl">
+        <h2 id="keyboard-heading" className="sr-only">
+          Phoneme keyboard
+        </h2>
         <PhonemeKeyboard showHints={showHints} />
       </section>
     </div>

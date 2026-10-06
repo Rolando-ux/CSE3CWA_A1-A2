@@ -10,10 +10,12 @@ export default function AboutPage() {
       <p className="mt-6 max-w-2xl text-zinc-600 dark:text-zinc-400">
         The Phoneme Activity Builder is a full-stack tool for Speech
         Pathology teachers to create phoneme-based classroom activities.
-        This is Assessment 2 of the project: word lists, phonemes and
+        This is Assessment 3 of the project: word lists, phonemes and
         activity settings are stored in a database and managed through a
-        backend API, and both builders generate activities from that
-        stored data.
+        backend API, and the application now also records how it is used
+        (generation successes and failures, time on each page, changes to
+        stored data) and reports it on a dashboard with health status,
+        alerts and reports.
       </p>
 
       <div className="mt-6 max-w-2xl space-y-4 text-left text-zinc-600 dark:text-zinc-400">
@@ -29,6 +31,16 @@ export default function AboutPage() {
           </strong>{" "}
           - lets a teacher generate a word search from a small list of
           phoneme-based words and download it as a standalone HTML activity.
+        </p>
+        <p>
+          <strong className="text-zinc-950 dark:text-zinc-50">
+            Dashboard
+          </strong>{" "}
+          - shows whether the system is healthy, raises alerts for problems
+          such as empty word lists or a high failure rate, summarises how
+          many Wordle and Word Search activities have been created and
+          generated, and lets a teacher generate, preview and download any
+          saved activity from its stored settings.
         </p>
       </div>
 

@@ -5,13 +5,14 @@ import type {
 } from "../generated/prisma/client";
 import { checkHealth, type HealthReport } from "./health";
 import { prisma } from "./prisma";
+import {
+  FAILURE_RATE_MIN_ATTEMPTS,
+  FAILURE_RATE_WARNING_PCT,
+  RECENT_WINDOW_DAYS,
+  VALIDATION_ERRORS_WARNING,
+} from "./thresholds";
 
-// Alert thresholds. Kept together so they are easy to find and explain.
 const CHART_DAYS = 30;
-const RECENT_WINDOW_DAYS = 7;
-const FAILURE_RATE_WARNING_PCT = 15;
-const FAILURE_RATE_MIN_ATTEMPTS = 10; // too few attempts make a rate meaningless
-const VALIDATION_ERRORS_WARNING = 5; // in the last 24 hours
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type AlertLevel = "error" | "warning" | "info";
@@ -56,6 +57,14 @@ export type Stats = {
     byPage: { path: string; sessions: number; averageSeconds: number }[];
   };
   failureReasons: { reason: string; count: number }[];
+  wordListSummary: {
+    id: number;
+    name: string;
+    /** Phonemes per word in this list. */
+    difficulty: number;
+    words: number;
+    activities: number;
+  }[];
   daily: DailyPoint[];
   recentGenerations: {
     id: number;
@@ -182,6 +191,7 @@ export async function getStats(): Promise<Stats> {
     sessionTotals,
     sessionsByPage,
     failureReasons,
+    wordListRows,
     chartLogs,
     recentGenerations,
     recentEvents,
@@ -218,6 +228,15 @@ export async function getStats(): Promise<Stats> {
       where: { status: "FAILURE" },
       _count: { _all: true },
       orderBy: { _count: { errorReason: "desc" } },
+    }),
+    prisma.wordList.findMany({
+      orderBy: [{ difficulty: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        difficulty: true,
+        _count: { select: { words: true, activities: true } },
+      },
     }),
     prisma.generationLog.findMany({
       where: { createdAt: { gte: chartStart } },
@@ -293,6 +312,13 @@ export async function getStats(): Promise<Stats> {
     failureReasons: failureReasons.map((row) => ({
       reason: row.errorReason ?? "Unknown",
       count: row._count._all,
+    })),
+    wordListSummary: wordListRows.map((list) => ({
+      id: list.id,
+      name: list.name,
+      difficulty: list.difficulty,
+      words: list._count.words,
+      activities: list._count.activities,
     })),
     daily: buildDailySeries(chartLogs, CHART_DAYS),
     recentGenerations: recentGenerations.map((g) => ({

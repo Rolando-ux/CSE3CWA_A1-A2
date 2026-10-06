@@ -14,18 +14,22 @@ activity.
 
 The generated HTML file is self-contained: downloading it and opening it in any
 web browser will run the activity directly, with no dependency on this
-application. Both generators have been verified by saving their real output to
-disk and opening it via a `file://` URL outside the dev server.
+application.
 
-Assessment 1 delivered the frontend-only builder. Assessment 2 adds a backend,
-database and API layer: teacher-managed word lists and activity configurations
-are now stored in a database and served through CRUD API routes, and both
-builders generate their activities from that stored data instead of a fixed
-frontend dataset. The application is also containerised with Docker.
+The project has been built in stages:
+
+- **Assessment 1** - the frontend-only builder.
+- **Assessment 2** - a backend, database and API layer. Teacher-managed word
+  lists and activity configurations are stored in a database and served through
+  CRUD API routes, and the application is containerised with Docker.
+- **Assessment 3** - a data-driven dashboard with observability and reporting.
+  Every generation attempt, page visit and change to stored data is recorded in
+  the database, and the dashboard turns that into health status, alerts, key
+  figures, charts and reports.
 
 ## Pages
 
-- **Home** - project introduction and links to the two builders
+- **Home** - project introduction and links to the builders and the dashboard
 - **About** - project description, student details, and a video walkthrough
 - **Wordle** - pick a stored word list, configure hint visibility and guess
   count; preview it as a playable guessing game; download it as a standalone
@@ -33,7 +37,39 @@ frontend dataset. The application is also containerised with Docker.
 - **Word Search** - pick a stored word list, configure hints and grid size;
   generate and preview the puzzle (drag-to-select, or click/keyboard two-tap
   selection); download it as a standalone HTML activity
+- **Dashboard** - system health, alerts, key usage figures, charts, reports, and
+  generation from saved activities (see below)
 - **Settings** - light/dark theme, persisted via a cookie
+
+## Dashboard (Assessment 3)
+
+The dashboard (`/dashboard`) reads everything from the database through
+`GET /api/stats`:
+
+- **System health** - a Healthy/Unhealthy indicator with database response time
+  and uptime, backed by the `/health` endpoint
+- **Alerts** - raised for an unreachable database, a failure rate above 15%
+  (over the last 7 days), empty word lists, repeated invalid input and no recent
+  activity. Each alert shows an icon and a word, not colour alone
+- **Key figures** - Wordle and Word Search activities created, word lists and
+  words stored, most-used activity type, successful and failed generation
+  counts, average time on page and average generation time
+- **Generate from saved activities** - preview or download any saved activity
+  using the settings stored in the database. Each attempt is logged against the
+  activity, so the figures update
+- **Charts** - generations per day (30 days), by activity type, and successful
+  versus failed. Hand-built SVG with a text description and a table view for
+  screen readers
+- **Reports** - a filterable, paged table of every generation attempt with a CSV
+  export, the reasons generations failed, time spent on each page, the stored
+  word lists, and a feed of recent changes
+
+### Simulated data
+
+`npm run db:seed-usage` fills the usage tables with 30 days of simulated
+records (generation attempts, page visits and builder actions) so the dashboard
+has history to report on. It is deterministic for a given day and never creates
+records dated in the future. Real usage is recorded alongside it.
 
 ## Features
 
@@ -48,11 +84,12 @@ frontend dataset. The application is also containerised with Docker.
 - Word Search grid is fully keyboard-operable (click/Enter two-tap
   selection) as well as pointer-drag, in both the builder and the
   downloaded activity
-- Responsive layout, verified down to a 375px mobile viewport including the
-  largest (20x20) Word Search grid
-- Word lists, phonemes and activity configurations are stored in a database
-  and managed through CRUD API routes, rather than hard-coded in the
-  frontend
+- Responsive layout down to a 375px mobile viewport
+- Word lists, phonemes and activity configurations stored in a database and
+  managed through CRUD API routes
+- Activities are generated on the server, validated, and logged as successes or
+  failures with a reason (for example "Word list is empty" or "Word does not
+  fit in grid")
 
 ## Tech Stack
 
@@ -67,8 +104,17 @@ frontend dataset. The application is also containerised with Docker.
 
 The database schema (`prisma/schema.prisma`) models `WordList` -> `Word` ->
 `WordPhoneme` (one row per phoneme, so multi-character IPA symbols like `tʃ`
-or `æɪ` are stored safely) plus a `PhonemeSymbol` reference table and an
+or `æɪ` are stored safely), a `PhonemeSymbol` reference table and an
 `Activity` table for saved Wordle/Word Search configurations.
+
+Three tables hold the observability data:
+
+- `GenerationLog` - one row per generation attempt: activity type, success or
+  failure, the failure reason, and how long it took. Deleting an activity keeps
+  its history
+- `PageSession` - one row per page visit: the page and the seconds spent on it
+- `UsageEvent` - a timeline of activities and word lists being created, updated
+  or deleted, and of invalid input being rejected
 
 API routes:
 
@@ -79,11 +125,17 @@ API routes:
 - `GET/PATCH/DELETE /api/words/[id]` - manage individual words
 - `GET/POST /api/activities`, `GET/PATCH/DELETE /api/activities/[id]` -
   manage activity configurations
-- `GET /api/health` - health check, returns `200 OK`
+- `POST /api/generate` - build a Wordle or Word Search HTML file, either from
+  explicit settings or from a saved activity (`{ "activityId": 1 }`)
+- `GET /api/stats` - every figure the dashboard shows
+- `GET /api/reports/generations` - filterable, paged generation report
+  (`?status=`, `?type=`, `?page=`, `?pageSize=`, `?format=csv`)
+- `POST /api/metrics/session` - receives time-on-page reports from the browser
+- `GET /health` (also `GET /api/health`) - health check, returns `200 OK` with
+  database status and response time, or `503` if the database is unreachable
 
-All write routes validate their input (non-empty text, recognised phoneme
-symbols, phoneme count matching the word list's difficulty, valid
-activity settings) and return clear JSON error messages on failure.
+All write routes validate their input and return clear JSON error messages on
+failure. Invalid input is also recorded as a usage event.
 
 ## Getting Started
 
@@ -93,12 +145,13 @@ Install dependencies:
 npm install
 ```
 
-Set up the database (creates `dev.db` and seeds it with the phoneme word
-corpus):
+Set up the database (creates `dev.db`, seeds the phoneme word corpus and saved
+activities, then the simulated usage records):
 
 ```bash
 npx prisma migrate dev
 npm run db:seed
+npm run db:seed-usage
 ```
 
 Run the development server:
@@ -122,10 +175,11 @@ The application can also be built and run in a Docker container:
 docker compose up --build
 ```
 
-This builds the image, runs the database migration and seed automatically on
-container startup, and starts the app on
-[http://localhost:3000](http://localhost:3000). Every container start
-produces a fresh, reproducible database from the same seed data.
+This builds the image, runs the database migration and word-list seed
+automatically on container startup, and starts the app on
+[http://localhost:3000](http://localhost:3000). Every container start produces a
+fresh database from the same seed data, so the usage statistics start empty
+there.
 
 ## Available Scripts
 
@@ -133,5 +187,8 @@ produces a fresh, reproducible database from the same seed data.
 - `npm run build` - build for production
 - `npm run start` - run the production build
 - `npm run lint` - run ESLint
-- `npm run db:seed` - reset and reseed the database from the phoneme corpus
-- `npm run db:view` - print a summary of the current database contents
+- `npm run db:seed` - reset and reseed the word lists and activities from the
+  phoneme corpus
+- `npm run db:seed-usage` - reset and reseed the simulated usage records
+- `npm run db:view` - print a summary of the current database contents,
+  including the usage statistics

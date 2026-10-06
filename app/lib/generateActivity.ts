@@ -2,7 +2,7 @@ import { PHONEME_KEYBOARD, type PhonemeWord } from "../data/phonemes";
 import { generateWordleHtml } from "./generateWordleHtml";
 import { generateWordSearchHtml } from "./generateWordSearchHtml";
 import { prisma } from "./prisma";
-import type { GenerateInput } from "./validation";
+import type { ActivityGenerateInput, GenerateInput } from "./validation";
 import { generatePuzzle, type Placement } from "./wordSearch";
 
 // Number of words from the chosen list that go into a Word Search.
@@ -64,7 +64,10 @@ function buildWordle(
   input: Extract<GenerateInput, { type: "WORDLE" }>,
   words: PhonemeWord[],
 ): GeneratedActivity {
-  const entry = words.find((w) => w.word === input.word);
+  const entry =
+    input.word === undefined
+      ? words[Math.floor(Math.random() * words.length)]
+      : words.find((w) => w.word === input.word);
   if (!entry) {
     throw new GenerationError(`"${input.word}" is not in that word list.`, 422);
   }
@@ -144,6 +147,45 @@ function buildWordSearch(
       keyboard: PHONEME_KEYBOARD,
     }),
     filename: "word-search.html",
+  };
+}
+
+/**
+ * Turns a saved Activity into a generation request using its stored settings,
+ * so the output is driven by the database rather than values from the page.
+ */
+export async function inputFromActivity(
+  request: ActivityGenerateInput,
+): Promise<{ input: GenerateInput; activityId: number }> {
+  const activity = await prisma.activity.findUnique({
+    where: { id: request.activityId },
+  });
+  if (!activity) {
+    throw new GenerationError("Activity not found.", 404);
+  }
+
+  if (activity.type === "WORDLE") {
+    return {
+      activityId: activity.id,
+      input: {
+        type: "WORDLE",
+        wordListId: activity.wordListId,
+        hintsEnabled: activity.hintsEnabled,
+        word: request.word,
+        guessCount: activity.guessCount ?? 6,
+      },
+    };
+  }
+
+  return {
+    activityId: activity.id,
+    input: {
+      type: "WORD_SEARCH",
+      wordListId: activity.wordListId,
+      hintsEnabled: activity.hintsEnabled,
+      gridRows: activity.gridRows ?? 10,
+      gridCols: activity.gridCols ?? 10,
+    },
   };
 }
 

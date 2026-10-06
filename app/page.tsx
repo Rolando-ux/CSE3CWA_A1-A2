@@ -9,7 +9,9 @@ export default function Home() {
       <p className="mt-4 max-w-xl text-zinc-600 dark:text-zinc-400">
         A classroom activity builder for Speech Pathology teachers. Create
         phoneme-based Wordle and Word Search activities, preview them, and
-        download a single HTML file ready to use in any web browser.
+        download a single HTML file ready to use in any web browser. The
+        dashboard shows how the builder is being used and whether it is
+        running healthily.
       </p>
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -24,6 +26,12 @@ export default function Home() {
           className="rounded-md border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-950 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
         >
           Build a Word Search activity
+        </Link>
+        <Link
+          href="/dashboard"
+          className="rounded-md border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-950 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900"
+        >
+          View the dashboard
         </Link>
       </div>
     </div>
