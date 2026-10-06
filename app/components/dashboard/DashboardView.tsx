@@ -64,8 +64,10 @@ export default function DashboardView() {
   );
 
   if (!stats) {
+    // min-h-screen keeps the footer below the fold while loading, so the page
+    // does not jump when the dashboard (thousands of pixels tall) appears.
     return (
-      <div className="flex flex-col items-start gap-3">
+      <div className="flex min-h-screen flex-col items-start gap-3">
         {error ? (
           <>
             <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">

@@ -213,21 +213,10 @@ function tryMatch(path) {
   }
 }
 
-function isCellFound(cell) {
-  for (var i = 0; i < PLACEMENTS.length; i++) {
-    var p = PLACEMENTS[i];
-    if (!foundWords[p.word]) continue;
-    for (var j = 0; j < p.coords.length; j++) {
-      if (p.coords[j].row === cell.row && p.coords[j].col === cell.col) return true;
-    }
-  }
-  return false;
-}
-
 function handleCellActivate(cell) {
-  // A stray click after a completed drag, or clicking an already-found
-  // cell, shouldn't disturb the two-tap anchor state.
-  if (isCellFound(cell)) return;
+  // Cells of a found word stay selectable: crossing words can share their
+  // first or last letter, so ignoring found cells would make the other word
+  // impossible to select by click or keyboard.
   if (!anchorCell) {
     anchorCell = cell;
     renderGrid();
@@ -292,12 +281,21 @@ window.addEventListener("pointermove", function (e) {
 window.addEventListener("pointerup", function () {
   if (!isSelecting) return;
   isSelecting = false;
-  tryMatch(selectionPath);
+  var wasDrag = selectionPath.length > 1;
+  if (wasDrag) tryMatch(selectionPath);
   selectionPath = [];
   startCell = null;
-  renderGrid();
-  renderWordList();
-  renderStatus();
+  if (wasDrag) {
+    renderGrid();
+    renderWordList();
+    renderStatus();
+  } else {
+    // A plain click, not a drag. Do not rebuild the grid here: that would
+    // replace the button under the pointer, the browser would drop the click
+    // that follows, and click-to-select would never work. The click handler
+    // re-renders itself.
+    updateSelectionVisual();
+  }
 });
 
 function renderKeyboard() {

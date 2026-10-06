@@ -12,6 +12,17 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+# throwaway database the end-to-end and load tests run against
+/test.db*
+# raw load-test output (large); the test plans and summary tables are committed
+/jmeter/results/
+/jmeter.log
+# Lighthouse report files (large); the summary table in lighthouse/RESULTS.md is committed
+/lighthouse/reports/
 
 # next.js
 /.next/
