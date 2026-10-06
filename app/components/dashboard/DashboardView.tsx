@@ -1,20 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { ACTIVITY_LABELS, formatDuration, formatPercent } from "../../lib/format";
 import { FAILURE_RATE_WARNING_PCT } from "../../lib/thresholds";
 import { useStats } from "../../lib/useStats";
+import AlertsPanel from "./AlertsPanel";
 import BarBreakdown from "./BarBreakdown";
 import DailyChart from "./DailyChart";
+import EventFeed from "./EventFeed";
+import GenerationReport from "./GenerationReport";
 import HealthBadge from "./HealthBadge";
 import KpiCard from "./KpiCard";
+import PageTimeTable from "./PageTimeTable";
+import SavedActivities from "./SavedActivities";
+import WordListSummary from "./WordListSummary";
 
 function Panel({
   id,
   title,
+  description,
   children,
 }: {
   id: string;
   title: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -22,21 +31,31 @@ function Panel({
       aria-labelledby={id}
       className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
     >
-      <h2 id={id} className="mb-3 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+      <h2 id={id} className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
         {title}
       </h2>
-      {children}
+      {description && (
+        <p className="mb-3 mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
+      )}
+      <div className={description ? "" : "mt-3"}>{children}</div>
     </section>
   );
 }
 
 export default function DashboardView() {
   const { stats, error, isLoading, refresh } = useStats();
+  // Bumped whenever the figures reload, so the self-fetching tables reload too.
+  const [reloadCount, setReloadCount] = useState(0);
+
+  function reload() {
+    refresh();
+    setReloadCount((count) => count + 1);
+  }
 
   const refreshButton = (
     <button
       type="button"
-      onClick={refresh}
+      onClick={reload}
       disabled={isLoading}
       className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-zinc-900 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-900 dark:focus-visible:ring-zinc-100"
     >
@@ -87,6 +106,7 @@ export default function DashboardView() {
       )}
 
       <HealthBadge health={stats.health} />
+      <AlertsPanel alerts={stats.alerts} />
 
       <section aria-labelledby="kpi-heading">
         <h2 id="kpi-heading" className="mb-3 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
@@ -141,6 +161,14 @@ export default function DashboardView() {
         </dl>
       </section>
 
+      <Panel
+        id="saved-heading"
+        title="Generate from saved activities"
+        description="Each activity is built from the settings stored in the database. Every attempt is logged, so the figures above update."
+      >
+        <SavedActivities refreshKey={reloadCount} onGenerated={reload} />
+      </Panel>
+
       <Panel id="daily-heading" title="Generations per day">
         <DailyChart daily={stats.daily} />
       </Panel>
@@ -178,6 +206,40 @@ export default function DashboardView() {
               },
             ]}
           />
+        </Panel>
+      </div>
+
+      <Panel
+        id="report-heading"
+        title="Generation report"
+        description="Every attempt to generate a Wordle or Word Search file, newest first. Filter it, or download what matches as a CSV."
+      >
+        <GenerationReport refreshKey={reloadCount} />
+      </Panel>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Panel id="reasons-heading" title="Why generations failed">
+          <BarBreakdown
+            items={stats.failureReasons.map((reason) => ({
+              label: reason.reason,
+              value: reason.count,
+              barClass: "fill-red-700 dark:fill-red-400",
+            }))}
+          />
+        </Panel>
+
+        <Panel id="pages-heading" title="Time on each page">
+          <PageTimeTable pages={pageTime.byPage} />
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Panel id="lists-heading" title="Stored word lists">
+          <WordListSummary lists={stats.wordListSummary} />
+        </Panel>
+
+        <Panel id="events-heading" title="Recent activity">
+          <EventFeed events={stats.recentEvents} />
         </Panel>
       </div>
     </div>

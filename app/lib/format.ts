@@ -27,6 +27,26 @@ export function formatDay(isoDate: string): string {
   return `${day} ${MONTHS[month - 1]}`;
 }
 
+export const EVENT_LABELS: Record<string, string> = {
+  ACTIVITY_CREATED: "Activity created",
+  ACTIVITY_UPDATED: "Activity updated",
+  ACTIVITY_DELETED: "Activity deleted",
+  WORDLIST_CREATED: "Word list created",
+  WORDLIST_UPDATED: "Word list updated",
+  WORDLIST_DELETED: "Word list deleted",
+  VALIDATION_ERROR: "Invalid data rejected",
+};
+
+/** "6 Oct, 11:42 am" - short local date and time for tables and feeds. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
