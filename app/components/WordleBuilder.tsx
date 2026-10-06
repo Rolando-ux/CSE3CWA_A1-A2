@@ -176,10 +176,14 @@ export default function WordleBuilder() {
   }
 
   if (!selectedList || !selectedWord) {
+    // min-h-screen keeps the footer below the fold while loading, so it is not
+    // pushed out of view (a layout shift) when the builder appears.
     return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
-        Loading word lists…
-      </p>
+      <div className="min-h-screen">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400" role="status">
+          Loading word lists…
+        </p>
+      </div>
     );
   }
 
