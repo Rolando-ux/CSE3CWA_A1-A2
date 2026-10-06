@@ -57,6 +57,14 @@ export type Stats = {
     byPage: { path: string; sessions: number; averageSeconds: number }[];
   };
   failureReasons: { reason: string; count: number }[];
+  wordListSummary: {
+    id: number;
+    name: string;
+    /** Phonemes per word in this list. */
+    difficulty: number;
+    words: number;
+    activities: number;
+  }[];
   daily: DailyPoint[];
   recentGenerations: {
     id: number;
@@ -183,6 +191,7 @@ export async function getStats(): Promise<Stats> {
     sessionTotals,
     sessionsByPage,
     failureReasons,
+    wordListRows,
     chartLogs,
     recentGenerations,
     recentEvents,
@@ -219,6 +228,15 @@ export async function getStats(): Promise<Stats> {
       where: { status: "FAILURE" },
       _count: { _all: true },
       orderBy: { _count: { errorReason: "desc" } },
+    }),
+    prisma.wordList.findMany({
+      orderBy: [{ difficulty: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        difficulty: true,
+        _count: { select: { words: true, activities: true } },
+      },
     }),
     prisma.generationLog.findMany({
       where: { createdAt: { gte: chartStart } },
@@ -294,6 +312,13 @@ export async function getStats(): Promise<Stats> {
     failureReasons: failureReasons.map((row) => ({
       reason: row.errorReason ?? "Unknown",
       count: row._count._all,
+    })),
+    wordListSummary: wordListRows.map((list) => ({
+      id: list.id,
+      name: list.name,
+      difficulty: list.difficulty,
+      words: list._count.words,
+      activities: list._count.activities,
     })),
     daily: buildDailySeries(chartLogs, CHART_DAYS),
     recentGenerations: recentGenerations.map((g) => ({
