@@ -299,7 +299,7 @@ export function parseGenerateInput(body: unknown): GenerateInput {
 
 // Pages that report time-on-page. Restricting to known paths stops arbitrary
 // strings being written into the table by anyone who can reach the API.
-const TRACKED_PATHS = new Set([...NAV_LINKS.map((link) => link.href), "/dashboard"]);
+const TRACKED_PATHS = new Set(NAV_LINKS.map((link) => link.href));
 
 export type PageSessionInput = {
   path: string;
