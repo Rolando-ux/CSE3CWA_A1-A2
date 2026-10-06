@@ -7,7 +7,12 @@ export default function WordListSummary({ lists }: { lists: Stats["wordListSumma
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label="Stored word lists table"
+      className="overflow-x-auto"
+    >
       <table className="w-full min-w-[420px] text-left text-sm">
         <caption className="sr-only">Stored word lists</caption>
         <thead>

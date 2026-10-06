@@ -50,7 +50,12 @@ export default function DailyChart({ daily }: { daily: DailyPoint[] }) {
         </li>
       </ul>
 
-      <div className="overflow-x-auto">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Generations per day chart, scrollable"
+        className="overflow-x-auto"
+      >
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           role="img"

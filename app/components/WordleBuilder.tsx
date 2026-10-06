@@ -306,7 +306,10 @@ export default function WordleBuilder() {
         </p>
       </section>
 
-      <section aria-label="Phoneme keyboard" className="w-full max-w-xl">
+      <section aria-labelledby="keyboard-heading" className="w-full max-w-xl">
+        <h2 id="keyboard-heading" className="sr-only">
+          Phoneme keyboard
+        </h2>
         <PhonemeKeyboard onSelect={handlePhonemeSelect} showHints={showHints} />
         <div className="mt-4 flex justify-center gap-3">
           <button
