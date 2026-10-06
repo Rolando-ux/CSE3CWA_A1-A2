@@ -20,6 +20,7 @@
 /test.db*
 # raw load-test output (large); the test plans and summary tables are committed
 /jmeter/results/
+/jmeter.log
 
 # next.js
 /.next/
