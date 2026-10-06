@@ -21,6 +21,8 @@
 # raw load-test output (large); the test plans and summary tables are committed
 /jmeter/results/
 /jmeter.log
+# Lighthouse report files (large); the summary table in lighthouse/RESULTS.md is committed
+/lighthouse/reports/
 
 # next.js
 /.next/

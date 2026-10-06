@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "blob-report/**",
+    // Generated reports (JMeter's are third-party JavaScript); not our code.
+    "jmeter/results/**",
+    "lighthouse/reports/**",
   ]),
 ]);
 
